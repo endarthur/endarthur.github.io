@@ -60,7 +60,7 @@
         phoneMarker.setAttribute("r", ".03");
         pointPlot.appendChild(phoneMarker);
         function handleOrientation(event) {
-            var orientationVector = at.dcosPlane([event.alpha, event.beta]);
+            var orientationVector = at.dcosPlaneEuler([event.alpha, event.beta, event.gamma]);
             var projected = at.projectEqualArea(
                 orientationVector
                 );
