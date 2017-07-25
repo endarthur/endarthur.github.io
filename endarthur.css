@@ -17,6 +17,11 @@
     fill: black;
 }
 
+#orientationPoint {
+    stroke: none;
+    fill: red;
+}
+
 svg.cartesian > g {
   transform: scaleY(-1);
 }

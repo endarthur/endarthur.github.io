@@ -39,6 +39,27 @@
         point.setAttribute("r", ".01");
         pointPlot.appendChild(point);
     }
+    var point = document.createElementNS(
+        "http://www.w3.org/2000/svg", 
+        "circle"
+    );
+    var phoneMarker = document.createElementNS(
+            "http://www.w3.org/2000/svg", 
+            "circle"
+        );
+    phoneMarker.setAttribute("id", "orientationPoint");
+    phoneMarker.setAttribute("cx", 0);
+    phoneMarker.setAttribute("cy", 0);
+    phoneMarker.setAttribute("r", ".03");
+    pointPlot.appendChild(phoneMarker);
+    function handleOrientation(event) {
+        var projected = projectEqualArea(
+            dcosPlane([event.alpha, event.beta])
+        );
+        phoneMarker.setAttribute("cx", projected[0]);
+        phoneMarker.setAttribute("cy", projected[1]);
+    }
+    window.addEventListener('deviceorientation', handleOrientation);
     </script>
 </body>
 
