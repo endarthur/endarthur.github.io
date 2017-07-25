@@ -1,0 +1,26 @@
+#stereoPlot {
+    height: auto;
+    width: 100vh;
+}
+
+.stereoDiagram {
+    stroke: grey;
+    stroke-width: 0.005;
+}
+
+#stereoCircle {
+    fill: none;
+}
+
+.plotPoint {
+    stroke: none;
+    fill: black;
+}
+
+svg.cartesian > g {
+  transform: scaleY(-1);
+}
+
+svg.cartesian > g text {
+  transform: scaleY(-1);
+}

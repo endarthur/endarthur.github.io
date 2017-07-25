@@ -1,7 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" type="text/css" href="endarthur.css">
+    <title>endarthur</title>
+</head>
+
 <body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
+    <svg class="cartesian" width="100" height="100" id="stereoPlot" viewBox="-1.1 -1.1 2.2 2.2">
+        <g class="stereoDiagram">
+         <circle id="stereoCircle" cx="0" cy="0" r="1" fill="none" vector-effects="non-scaling-stroke"></circle>
+         <line class="cardinalMarker" x1="0" y1="0.95" x2="0" y2="1.05" />
+         <line class="cardinalMarker" x1="0" y1="-0.95" x2="0" y2="-1.05" />
+         <line class="cardinalMarker" x1="0.95" y1="0" x2="1.05" y2="0" />
+         <line class="cardinalMarker" x1="-0.95" y1="0" x2="-1.05" y2="0" />
+         <line class="cardinalMarker" x1="-0.05" y1="0" x2="0.05" y2="0" />
+         <line class="cardinalMarker" x1="0" y1="-0.05" x2="0" y2="0.05" />
+        </g>
+        <g id="stereoPoints"></g>
+    </svg>
+    <script src="js/autti.js"></script>
+    <script src="tocher.json"></script>
+    <script>
+    var pointPlot = document.getElementById('stereoPoints');
+    for (var i = 0; i < tocher_data.length; i++){
+        var ivec = dcosPlane(tocher_data[i]);
+        var projected = projectEqualArea(ivec);
+        var point = document.createElementNS(
+            "http://www.w3.org/2000/svg", 
+            "circle"
+        );
+        point.setAttribute("class", "plotPoint");
+        point.setAttribute("cx",projected[0]);
+        point.setAttribute("cy",projected[1]);
+        point.setAttribute("r", ".01");
+        pointPlot.appendChild(point);
+    }
+    </script>
 </body>
+
 </html>
