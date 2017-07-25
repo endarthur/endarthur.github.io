@@ -82,6 +82,40 @@ Vector.prototype.over = function (a) {
     return this.times(1/a);
 }
 
+Vector.prototype.direction_vector = function () {
+    if (this.x[2] == 1.){
+        return Vector([1., 0., 0.]);
+    }
+    else{
+        var x = this.x[0];
+        var y = this.x[1];
+        var direction_norm = Math.sqrt(x*x + y*y);
+        return new Vector(
+            [y/direction_norm, -x/direction_norm, 0]
+        );
+    }
+}
+
+Vector.prototype.dip_vector = function () {
+    return this.cross(this.direction_vector());
+}
+
+Vector.prototype.great_circle = function(n){
+    if (typeof(n)==='undefined') n = 180.;
+    var result = [];
+    dip = this.dip_vector();
+    dir = this.direction_vector();
+    for (var i=0; i <= n; i++){
+        theta = Math.PI*i/n;
+        result.push(
+            dir.times(Math.cos(theta)).plus(
+                dip.times(Math.sin(theta))
+            )
+        );
+    }
+    return result;
+}
+
 function dcosPlane (attitude) {
     var dd = Math.radians(attitude[0]);
     var d = Math.radians(attitude[1]);

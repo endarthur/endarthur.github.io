@@ -12,54 +12,70 @@
 <body>
     <svg class="cartesian" width="100" height="100" id="stereoPlot" viewBox="-1.1 -1.1 2.2 2.2">
         <g class="stereoDiagram">
-         <circle id="stereoCircle" cx="0" cy="0" r="1" fill="none" vector-effects="non-scaling-stroke"></circle>
-         <line class="cardinalMarker" x1="0" y1="0.95" x2="0" y2="1.05" />
-         <line class="cardinalMarker" x1="0" y1="-0.95" x2="0" y2="-1.05" />
-         <line class="cardinalMarker" x1="0.95" y1="0" x2="1.05" y2="0" />
-         <line class="cardinalMarker" x1="-0.95" y1="0" x2="-1.05" y2="0" />
-         <line class="cardinalMarker" x1="-0.05" y1="0" x2="0.05" y2="0" />
-         <line class="cardinalMarker" x1="0" y1="-0.05" x2="0" y2="0.05" />
+            <circle id="stereoCircle" cx="0" cy="0" r="1" fill="none" vector-effects="non-scaling-stroke"></circle>
+            <line class="cardinalMarker" x1="0" y1="0.95" x2="0" y2="1.05" />
+            <line class="cardinalMarker" x1="0" y1="-0.95" x2="0" y2="-1.05" />
+            <line class="cardinalMarker" x1="0.95" y1="0" x2="1.05" y2="0" />
+            <line class="cardinalMarker" x1="-0.95" y1="0" x2="-1.05" y2="0" />
+            <line class="cardinalMarker" x1="-0.05" y1="0" x2="0.05" y2="0" />
+            <line class="cardinalMarker" x1="0" y1="-0.05" x2="0" y2="0.05" />
         </g>
-        <g id="stereoPoints"></g>
+        <g id="stereoPoints">
+        </g>
+        <g id="stereoLines">
+            <polyline id="phone-gc" points="0, 0" style="fill:none;stroke:orange;stroke-width:.005" />
+        </g>
     </svg>
     <script src="js/autti.js"></script>
     <script src="tocher.json"></script>
     <script>
-    var pointPlot = document.getElementById('stereoPoints');
-    for (var i = 0; i < tocher_data.length; i++){
-        var ivec = dcosPlane(tocher_data[i]);
-        var projected = projectEqualArea(ivec);
+        var pointPlot = document.getElementById('stereoPoints');
+        var svg = document.getElementById('stereoPlot');
+        for (var i = 0; i < tocher_data.length; i++) {
+            var ivec = dcosPlane(tocher_data[i]);
+            var projected = projectEqualArea(ivec);
+            var point = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "circle"
+            );
+            point.setAttribute("class", "plotPoint");
+            point.setAttribute("cx", projected[0]);
+            point.setAttribute("cy", projected[1]);
+            point.setAttribute("r", ".01");
+            pointPlot.appendChild(point);
+        }
         var point = document.createElementNS(
-            "http://www.w3.org/2000/svg", 
+            "http://www.w3.org/2000/svg",
             "circle"
         );
-        point.setAttribute("class", "plotPoint");
-        point.setAttribute("cx",projected[0]);
-        point.setAttribute("cy",projected[1]);
-        point.setAttribute("r", ".01");
-        pointPlot.appendChild(point);
-    }
-    var point = document.createElementNS(
-        "http://www.w3.org/2000/svg", 
-        "circle"
-    );
-    var phoneMarker = document.createElementNS(
-            "http://www.w3.org/2000/svg", 
+        var phoneMarker = document.createElementNS(
+            "http://www.w3.org/2000/svg",
             "circle"
         );
-    phoneMarker.setAttribute("id", "orientationPoint");
-    phoneMarker.setAttribute("cx", 0);
-    phoneMarker.setAttribute("cy", 0);
-    phoneMarker.setAttribute("r", ".03");
-    pointPlot.appendChild(phoneMarker);
-    function handleOrientation(event) {
-        var projected = projectEqualArea(
-            dcosPlane([event.alpha, event.beta])
-        );
-        phoneMarker.setAttribute("cx", projected[0]);
-        phoneMarker.setAttribute("cy", projected[1]);
-    }
-    window.addEventListener('deviceorientation', handleOrientation);
+        var phone_gc = document.getElementById('phone-gc');
+        phoneMarker.setAttribute("id", "orientationPoint");
+        phoneMarker.setAttribute("cx", 0);
+        phoneMarker.setAttribute("cy", 0);
+        phoneMarker.setAttribute("r", ".03");
+        pointPlot.appendChild(phoneMarker);
+        function handleOrientation(event) {
+            var orientationVector = dcosPlane([event.alpha, event.beta]);
+            var projected = projectEqualArea(
+                orientationVector
+                );
+            phoneMarker.setAttribute("cx", projected[0]);
+            phoneMarker.setAttribute("cy", projected[1]);
+            phone_gc.points.clear();
+            var new_gc = orientationVector.great_circle();
+            for (var i = 0; i <180; i++){
+                var proj_gc = projectEqualArea(new_gc[i]);
+                var point = svg.createSVGPoint();
+                point.x = proj_gc[0];
+                point.y = proj_gc[1];
+                phone_gc.points.appendItem(point);
+            }
+        }
+        window.addEventListener('deviceorientation', handleOrientation);
     </script>
 </body>
 
