@@ -1,11 +1,13 @@
+var Auttitude = (function () {
+
 //from http://cwestblog.com/2012/11/12/javascript-degree-and-radian-conversion/
 // Converts from degrees to radians.
-Math.radians = function(degrees) {
+var radians = function(degrees) {
   return degrees * Math.PI / 180;
 };
  
 // Converts from radians to degrees.
-Math.degrees = function(radians) {
+var degrees = function(radians) {
   return radians * 180 / Math.PI;
 };
 
@@ -117,8 +119,8 @@ Vector.prototype.great_circle = function(n){
 }
 
 function dcosPlane (attitude) {
-    var dd = Math.radians(attitude[0]);
-    var d = Math.radians(attitude[1]);
+    var dd = radians(attitude[0]);
+    var d = radians(attitude[1]);
     return new Vector([
         -Math.sin(d)*Math.sin(dd),
         -Math.sin(d)*Math.cos(dd),
@@ -187,3 +189,16 @@ function readEqualArea (point) {
             -1. + (X*X + Y*Y)/2
     ];
 }
+
+var Module = {};
+Module.degrees = degrees;
+Module.radians = radians;
+Module.Vector = Vector;
+Module.dcosPlane = dcosPlane;
+Module.spherePlane = spherePlane;
+Module.dcosLine = dcosLine;
+Module.projectEqualArea = projectEqualArea;
+Module.readEqualArea = readEqualArea;
+
+return Module;
+})();

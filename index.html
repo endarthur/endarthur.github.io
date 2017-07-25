@@ -29,11 +29,12 @@
     <script src="js/autti.js"></script>
     <script src="tocher.json"></script>
     <script>
+        var at = Auttitude;
         var pointPlot = document.getElementById('stereoPoints');
         var svg = document.getElementById('stereoPlot');
         for (var i = 0; i < tocher_data.length; i++) {
-            var ivec = dcosPlane(tocher_data[i]);
-            var projected = projectEqualArea(ivec);
+            var ivec = at.dcosPlane(tocher_data[i]);
+            var projected = at.projectEqualArea(ivec);
             var point = document.createElementNS(
                 "http://www.w3.org/2000/svg",
                 "circle"
@@ -59,8 +60,8 @@
         phoneMarker.setAttribute("r", ".03");
         pointPlot.appendChild(phoneMarker);
         function handleOrientation(event) {
-            var orientationVector = dcosPlane([event.alpha, event.beta]);
-            var projected = projectEqualArea(
+            var orientationVector = at.dcosPlane([event.alpha, event.beta]);
+            var projected = at.projectEqualArea(
                 orientationVector
                 );
             phoneMarker.setAttribute("cx", projected[0]);
@@ -68,7 +69,7 @@
             phone_gc.points.clear();
             var new_gc = orientationVector.great_circle();
             for (var i = 0; i <180; i++){
-                var proj_gc = projectEqualArea(new_gc[i]);
+                var proj_gc = at.projectEqualArea(new_gc[i]);
                 var point = svg.createSVGPoint();
                 point.x = proj_gc[0];
                 point.y = proj_gc[1];
