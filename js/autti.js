@@ -143,21 +143,21 @@ var Auttitude = (function () {
     function spherePlane(plane) {
         var x = plane.x[0];
         var y = plane.x[1];
-        var z = plane.z[2];
+        var z = plane.x[2];
         if (z < 0) {
             x = -x;
             y = -y;
             z = -z;
         }
         return [
-            Math.degrees(Math.atan2(x, y)) % 360.,
-            Math.degrees(Math.acos(z))
+            degrees(Math.atan2(x, y)) % 360.,
+            degrees(Math.acos(z))
         ];
     }
 
     function dcosLine(attitude) {
-        var tr = Math.radians(attitude[0]);
-        var pl = math.radians(attitude[1]);
+        var tr = radians(attitude[0]);
+        var pl = radians(attitude[1]);
         return new Vector([
             Math.cos(pl) * Math.sin(tr),
             Math.cos(pl) * Math.cos(tr),
@@ -168,7 +168,7 @@ var Auttitude = (function () {
     function sphereLine(line) {
         var x = line.x[0];
         var y = line.x[1];
-        var z = line.z[2];
+        var z = line.x[2];
         if (z > 0) {
             x = -x;
             y = -y;
@@ -177,8 +177,8 @@ var Auttitude = (function () {
             z = -z;
         }
         return [
-            Math.degrees(Math.atan2(x, y)) % 360.,
-            Math.degrees(Math.acos(z))
+            degrees(Math.atan2(x, y)) % 360.,
+            degrees(Math.acos(z))
         ];
     }
 

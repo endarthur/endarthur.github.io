@@ -26,6 +26,7 @@
             <polyline id="phone-gc" points="0, 0" style="fill:none;stroke:orange;stroke-width:.005" />
         </g>
     </svg>
+    <p id="orientationAngles"></p>
     <script src="js/autti.js"></script>
     <script src="tocher.json"></script>
     <script>
@@ -68,6 +69,7 @@
             phoneMarker.setAttribute("cy", projected[1]);
             phone_gc.points.clear();
             var new_gc = orientationVector.great_circle();
+            document.getElementById("orientationAngles").innerHTML = at.spherePlane(orientationVector).toString();
             for (var i = 0; i <180; i++){
                 var proj_gc = at.projectEqualArea(new_gc[i]);
                 var point = svg.createSVGPoint();
