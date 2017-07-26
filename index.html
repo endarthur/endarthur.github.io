@@ -12,8 +12,8 @@
 
 <body>
     <div class="container">
-        <svg class="cartesian" width="100" height="100" id="stereoPlot" viewBox="-1.1 -1.1 2.2 2.2">
-            <g class="stereoDiagram">
+        <svg width="100" height="100" id="stereoPlot" viewBox="-110 -110 220 220">
+            <g class="stereo-element" id="stereoDiagram">
                 <clipPath id="clipPrimitive">
                     <circle cx="0" cy="0" r="1" />
                 </clipPath>
@@ -25,19 +25,19 @@
                 <line class="cardinalMarker" x1="-0.05" y1="0" x2="0.05" y2="0" />
                 <line class="cardinalMarker" x1="0" y1="-0.05" x2="0" y2="0.05" />
             </g>
-            <g id="stereoPoints">
+            <g class="stereo-element" id="stereoPoints">
             </g>
-            <g id="stereoLines">
-                <polyline id="phone-gc" points="0, 0" style="fill:none;stroke:orange;stroke-width:.005" />
+            <g class="stereo-element" id="stereoLines">
+                <polyline id="phone-gc" points="0, 0" />
             </g>
             <g id="stereoText">
-                <text x=".7" y="1" id="projectionText">
+                <text x="80" y="97" id="projectionText">
                     130/45
                 </text>
             </g>
         </svg>
         <div id="intro-text">
-            <h1>Hi.</h1>
+            <h1>Computatrum et Malleo.</h1>
             <p>I'm Arthur Endlein (endarthur), and consider myself a computer geologist even if such thing may not exist. This
                 page currently works as a lower hemisphere equal-area projection of your device's orientation, as a plane.
                 The reference for the sample data plotted as background is:</p>
@@ -52,9 +52,9 @@
                     <a href="https://github.com/endarthur/ply2atti-scanline">ply2atti-scanline</a>
                 </li>
                 <li>
-                    <a href="https://github.com/endarthur/autti">auttitude (to be published)</a>
+                    <a href="https://github.com/endarthur/autti">auttitude</a>
                 </li>
-            </ul >
+            </ul>
         </div>
         <div id="academic">
             <h2>academic</h2>
@@ -72,6 +72,10 @@
     <script src="js/autti.js"></script>
     <script src="tocher.json"></script>
     <script>
+        // from https://stackoverflow.com/a/5367656/1457481
+        function padLeft(nr, n, str) {
+            return Array(n - String(nr).length + 1).join(str || '0') + nr;
+        }
         var at = Auttitude;
         var pointPlot = document.getElementById('stereoPoints');
         var svg = document.getElementById('stereoPlot');
@@ -113,7 +117,7 @@
             phone_gc.points.clear();
             var new_gc = orientationVector.great_circle();
             var sphere = at.spherePlane(orientationVector);
-            document.getElementById("projectionText").innerHTML = sphere[0].toFixed(0) + "/" + sphere[1].toFixed(0);
+            document.getElementById("projectionText").innerHTML = padLeft(sphere[0].toFixed(0), 3) + "/" + padLeft(sphere[1].toFixed(0), 2);
             for (var i = 0; i < 180; i++) {
                 var proj_gc = at.projectEqualArea(new_gc[i]);
                 var point = svg.createSVGPoint();

@@ -1,5 +1,6 @@
 body {
     font-family: 'Source Sans Pro', sans-serif;
+    background-color: #F8F8F1;
 }
 
 .container {
@@ -39,8 +40,26 @@ li {
     margin: .5em 0;
 }
 
-.stereoDiagram {
-    stroke: grey;
+
+/* With help from https://www.viget.com/articles/color-contrast */
+h1 {
+    color: #555f61;
+}
+
+h2 {
+    color: #555f61;
+}
+
+p {
+    color:#144270;
+}
+
+a {
+    color: #704214;
+}
+
+#stereoDiagram {
+    stroke: #555f61;
     stroke-width: 0.005;
 }
 
@@ -50,28 +69,30 @@ li {
 
 .plotPoint {
     stroke: none;
-    fill: black;
+    fill: #373d3f;
 }
 
 #orientationPoint {
     stroke: none;
-    fill: red;
+    fill: #e9162d;
 }
 
 #stereoLines {
     clip-path: url(#clipPrimitive);
 }
-
-svg.cartesian > g {
-  transform: scaleY(-1);
+#phone-gc {
+    fill:none;
+    stroke:#e9162d;
+    stroke-width:.005;
 }
 
-svg.cartesian > g text {
-  transform: scaleY(-1);
+svg > g.stereo-element {
+  transform: scale(100, -100);
 }
 
 #projectionText {
-    font-size: 0.4%;
+    font-size: 5pt;
+    fill:#144270;
 }
 
 

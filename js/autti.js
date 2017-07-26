@@ -123,26 +123,40 @@ var Auttitude = (function () {
         return result;
     }
 
-    function dcosPlane(attitude) {
+    function dcosPlane(attitude, invert_positive) {
+        if (typeof (invert_positive) === 'undefined') invert_positive = true;
         var dd = radians(attitude[0]);
         var d = radians(attitude[1]);
-        return new Vector([
+        dcos = [
             -Math.sin(d) * Math.sin(dd),
             -Math.sin(d) * Math.cos(dd),
             -Math.cos(d)
-        ]);
+        ];
+        if (invert_positive && dcos[2] > 0){
+            dcos[0] = -dcos[0];
+            dcos[1] = -dcos[1];
+            dcos[2] = -dcos[2];
+        }
+        return new Vector(dcos);
     }
 
     //https://math.stackexchange.com/a/1637853/119393
-    function dcosPlaneEuler(attitude) {
+    function dcosPlaneEuler(attitude, invert_positive) {
+        if (typeof (invert_positive) === 'undefined') invert_positive = true;
         var yaw = radians(attitude[0]);
         var pitch = radians(attitude[1]);
         var roll = radians(attitude[2]);
-        return new Vector([
+        dcos = [
             Math.sin(roll) * Math.cos(yaw) + Math.cos(roll) * Math.sin(pitch) * Math.sin(yaw),
             -Math.sin(roll) * Math.sin(yaw) + Math.cos(roll) * Math.sin(pitch) * Math.cos(yaw),
             -Math.cos(roll) * Math.cos(pitch)
-        ]);
+        ];
+        if (invert_positive && dcos[2] > 0){
+            dcos[0] = -dcos[0];
+            dcos[1] = -dcos[1];
+            dcos[2] = -dcos[2];
+        }
+        return new Vector(dcos);
     }
 
     function spherePlane(plane) {
@@ -160,14 +174,21 @@ var Auttitude = (function () {
         ];
     }
 
-    function dcosLine(attitude) {
+    function dcosLine(attitude, invert_positive) {
+        if (typeof (invert_positive) === 'undefined') invert_positive = true;
         var tr = radians(attitude[0]);
         var pl = radians(attitude[1]);
-        return new Vector([
+        dcos = [
             Math.cos(pl) * Math.sin(tr),
             Math.cos(pl) * Math.cos(tr),
             -Math.sin(pl)
-        ]);
+        ];
+        if (invert_positive && dcos[2] > 0){
+            dcos[0] = -dcos[0];
+            dcos[1] = -dcos[1];
+            dcos[2] = -dcos[2];
+        }
+        return new Vector(dcos);
     }
 
     function sphereLine(line) {
