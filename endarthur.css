@@ -1,6 +1,41 @@
+body {
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: 1fr auto;
+    grid-gap: 15px 10px;
+    grid-template-areas: 
+    "stereo intro intro"
+    "stereo repos academic";
+}
+
 #stereoPlot {
     height: auto;
-    width: 100vh;
+    width: 100%;
+    grid-area: stereo;
+}
+
+#intro-text {
+    grid-area: intro;
+}
+
+#github-repos {
+    grid-area: repos;
+}
+
+#academic {
+    grid-area: academic;
+}
+
+ul.base-list {
+    list-style-type: none;
+}
+
+li {
+    margin: .5em 0;
 }
 
 .stereoDiagram {
@@ -22,10 +57,34 @@
     fill: red;
 }
 
+#stereoLines {
+    clip-path: url(#clipPrimitive);
+}
+
 svg.cartesian > g {
   transform: scaleY(-1);
 }
 
 svg.cartesian > g text {
   transform: scaleY(-1);
+}
+
+#projectionText {
+    font-size: 0.4%;
+}
+
+
+
+@media (orientation: landscape) {
+}
+
+@media (orientation: portrait) {
+    .container {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr auto auto;
+        grid-template-areas: 
+        "stereo stereo"
+        "intro intro"
+        "repos academic";
+    }
 }

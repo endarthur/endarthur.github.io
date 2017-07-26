@@ -6,27 +6,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="stylesheet" type="text/css" href="endarthur.css">
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet">
     <title>endarthur</title>
 </head>
 
 <body>
-    <svg class="cartesian" width="100" height="100" id="stereoPlot" viewBox="-1.1 -1.1 2.2 2.2">
-        <g class="stereoDiagram">
-            <circle id="stereoCircle" cx="0" cy="0" r="1" fill="none" vector-effects="non-scaling-stroke"></circle>
-            <line class="cardinalMarker" x1="0" y1="0.95" x2="0" y2="1.05" />
-            <line class="cardinalMarker" x1="0" y1="-0.95" x2="0" y2="-1.05" />
-            <line class="cardinalMarker" x1="0.95" y1="0" x2="1.05" y2="0" />
-            <line class="cardinalMarker" x1="-0.95" y1="0" x2="-1.05" y2="0" />
-            <line class="cardinalMarker" x1="-0.05" y1="0" x2="0.05" y2="0" />
-            <line class="cardinalMarker" x1="0" y1="-0.05" x2="0" y2="0.05" />
-        </g>
-        <g id="stereoPoints">
-        </g>
-        <g id="stereoLines">
-            <polyline id="phone-gc" points="0, 0" style="fill:none;stroke:orange;stroke-width:.005" />
-        </g>
-    </svg>
-    <p id="orientationAngles"></p>
+    <div class="container">
+        <svg class="cartesian" width="100" height="100" id="stereoPlot" viewBox="-1.1 -1.1 2.2 2.2">
+            <g class="stereoDiagram">
+                <clipPath id="clipPrimitive">
+                    <circle cx="0" cy="0" r="1" />
+                </clipPath>
+                <circle id="stereoCircle" cx="0" cy="0" r="1" fill="none" vector-effects="non-scaling-stroke"></circle>
+                <line class="cardinalMarker" x1="0" y1="0.95" x2="0" y2="1.05" />
+                <line class="cardinalMarker" x1="0" y1="-0.95" x2="0" y2="-1.05" />
+                <line class="cardinalMarker" x1="0.95" y1="0" x2="1.05" y2="0" />
+                <line class="cardinalMarker" x1="-0.95" y1="0" x2="-1.05" y2="0" />
+                <line class="cardinalMarker" x1="-0.05" y1="0" x2="0.05" y2="0" />
+                <line class="cardinalMarker" x1="0" y1="-0.05" x2="0" y2="0.05" />
+            </g>
+            <g id="stereoPoints">
+            </g>
+            <g id="stereoLines">
+                <polyline id="phone-gc" points="0, 0" style="fill:none;stroke:orange;stroke-width:.005" />
+            </g>
+            <g id="stereoText">
+                <text x=".7" y="1" id="projectionText">
+                    130/45
+                </text>
+            </g>
+        </svg>
+        <div id="intro-text">
+            <h1>Hi.</h1>
+            <p>I'm Arthur Endlein (endarthur), and consider myself a computer geologist even if such thing may not exist. This
+                page currently works as a lower hemisphere equal-area projection of your device's orientation, as a plane.
+                The reference for the sample data plotted as background is:</p>
+            <p>Tocher, F. E. (1979). The computer contouring of fabric diagrams. Computers &amp; Geosciences, 5(1), 73-126.
+                <a href="https://doi.org/10.1016/0098-3004(79)90019-0">https://doi.org/10.1016/0098-3004(79)90019-0</a>
+            </p>
+        </div>
+        <div id="github-repos">
+            <h2>github</h2>
+            <ul class="base-list">
+                <li>
+                    <a href="https://github.com/endarthur/ply2atti-scanline">ply2atti-scanline</a>
+                </li>
+                <li>
+                    <a href="https://github.com/endarthur/autti">auttitude (to be published)</a>
+                </li>
+            </ul >
+        </div>
+        <div id="academic">
+            <h2>academic</h2>
+            <ul class="base-list">
+                <li>
+                    <a href="https://scholar.google.com.br/citations?user=j3aEIokAAAAJ&hl=en&oi=ao">Google Scholar</a>
+                </li>
+                <li>
+                    <a href="http://lattes.cnpq.br/3417444771442633">Academic Curriculum (pt-br)</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
     <script src="js/autti.js"></script>
     <script src="tocher.json"></script>
     <script>
@@ -34,6 +76,7 @@
         var pointPlot = document.getElementById('stereoPoints');
         var svg = document.getElementById('stereoPlot');
         for (var i = 0; i < tocher_data.length; i++) {
+            break;
             var ivec = at.dcosPlane(tocher_data[i]);
             var projected = at.projectEqualArea(ivec);
             var point = document.createElementNS(
@@ -64,13 +107,14 @@
             var orientationVector = at.dcosPlaneEuler([event.alpha, event.beta, event.gamma]);
             var projected = at.projectEqualArea(
                 orientationVector
-                );
+            );
             phoneMarker.setAttribute("cx", projected[0]);
             phoneMarker.setAttribute("cy", projected[1]);
             phone_gc.points.clear();
             var new_gc = orientationVector.great_circle();
-            document.getElementById("orientationAngles").innerHTML = at.spherePlane(orientationVector).toString();
-            for (var i = 0; i <180; i++){
+            var sphere = at.spherePlane(orientationVector);
+            document.getElementById("projectionText").innerHTML = sphere[0].toFixed(0) + "/" + sphere[1].toFixed(0);
+            for (var i = 0; i < 180; i++) {
                 var proj_gc = at.projectEqualArea(new_gc[i]);
                 var point = svg.createSVGPoint();
                 point.x = proj_gc[0];

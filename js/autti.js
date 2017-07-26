@@ -11,6 +11,11 @@ var Auttitude = (function () {
         return radians * 180 / Math.PI;
     };
 
+    //https://stackoverflow.com/a/17323608/1457481
+    function mod(n, m) {
+        return ((n % m) + m) % m;
+    }
+
     var sqrt2 = Math.sqrt(2.);
 
     function Vector(x) {
@@ -108,7 +113,7 @@ var Auttitude = (function () {
         dip = this.dip_vector();
         dir = this.direction_vector();
         for (var i = 0; i <= n; i++) {
-            theta = Math.PI * i / n;
+            theta = 2*Math.PI * i / n;
             result.push(
                 dir.times(Math.cos(theta)).plus(
                     dip.times(Math.sin(theta))
@@ -134,8 +139,8 @@ var Auttitude = (function () {
         var pitch = radians(attitude[1]);
         var roll = radians(attitude[2]);
         return new Vector([
-            Math.sin(roll) * Math.cos(yaw) + Math.cos(roll)*Math.sin(pitch)*Math.sin(yaw),
-            -Math.sin(roll) * Math.sin(yaw) + Math.cos(roll)*Math.sin(pitch)*Math.cos(yaw),
+            Math.sin(roll) * Math.cos(yaw) + Math.cos(roll) * Math.sin(pitch) * Math.sin(yaw),
+            -Math.sin(roll) * Math.sin(yaw) + Math.cos(roll) * Math.sin(pitch) * Math.cos(yaw),
             -Math.cos(roll) * Math.cos(pitch)
         ]);
     }
@@ -150,7 +155,7 @@ var Auttitude = (function () {
             z = -z;
         }
         return [
-            degrees(Math.atan2(x, y)) % 360.,
+            mod(degrees(Math.atan2(x, y)), 360.),
             degrees(Math.acos(z))
         ];
     }
@@ -177,7 +182,7 @@ var Auttitude = (function () {
             z = -z;
         }
         return [
-            degrees(Math.atan2(x, y)) % 360.,
+            mod(degrees(Math.atan2(x, y)), 360.),
             degrees(Math.acos(z))
         ];
     }
