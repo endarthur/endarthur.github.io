@@ -4,8 +4,9 @@ body {
 
 .container {
     display: grid;
+    height: 100%;
     grid-template-columns: 2fr 1fr 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: auto 1fr;
     grid-gap: 15px 10px;
     grid-template-areas: 
     "stereo intro intro"
