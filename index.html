@@ -58,12 +58,16 @@
         </svg>
         <div id="intro-text">
             <h1>Computatrum et Malleo.</h1>
-            <p>I'm Arthur Endlein (endarthur), and consider myself a computer geologist even if such thing may not exist. This
-                page currently works as a experimental geological compass.</p>
+            <p>I'm Arthur Endlein (endarthur), and consider myself a computer geologist even if such thing may not exist. My
+                main research areas are applied structural geology, applied geostatistics, and software development for geosciences.
+                If you are using an Android or iOS phone with compass and accelerometer, this page currently works as an
+                experimental geological compass.
+            </p>
             <p>
-                The lower left icon (concentric circles) on the projection locks the measurement when held. This behavior can be inverted by clicking
-                on the upper left icon (open padlock), then the measurement will be locked by default, and released while the circles icon is pressed.
-                To measure lines instead of planes, click on the upper right icon (planar attitude map symbol).
+                The lower left icon (concentric circles) on the projection locks the measurement when held. This behavior can be inverted
+                by clicking on the upper left icon (open padlock), then the measurement will be locked by default, and released
+                while the circles icon is pressed. To measure lines instead of planes, click on the upper right icon (planar
+                attitude map symbol).
             </p>
             <p>
                 As said before, this compass is highly experimental, and as so should probably not be relied uppon for actual field work.
@@ -139,7 +143,7 @@
                 point.y = proj_gc[1];
                 phone_gc.points.appendItem(point);
             }
-            if (!plane_toggle){
+            if (!plane_toggle) {
                 var sphere = at.spherePlane(orientationVector);
             } else {
                 var sphere = at.sphereLine(dipVector);
