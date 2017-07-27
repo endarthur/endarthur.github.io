@@ -102,7 +102,6 @@ SOFTWARE.
                 As said before, this compass is highly experimental, and as so should probably not be relied uppon for actual field work.
                 Might be useful as a teaching aid, though. Any questions or suggestions are more than welcome.
             </p>
-            <p id="location_test">testtestest </p>
         </div>
         <div id="github-repos">
             <h2>github</h2>
@@ -237,9 +236,7 @@ SOFTWARE.
                 phone_gc.style.display = "initial";
                 plane_toggle = false;
             }
-        });
-        navigator.geolocation.getCurrentPosition(function (position) {
-            document.getElementById("location_test").innerHTML = position.coords.latitude + "/" + position.coords.longitude;
+
         });
     </script>
 </body>
