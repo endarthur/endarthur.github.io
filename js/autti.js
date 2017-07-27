@@ -168,7 +168,7 @@ var Auttitude = (function () {
         var pitch = radians(attitude[1]);
         var roll = radians(attitude[2]);
         dcos = [
-            Math.sin(roll) * Math.cos(yaw) + Math.cos(roll) * Math.sin(pitch) * Math.sin(yaw),
+            -Math.sin(roll) * Math.cos(yaw) - Math.cos(roll) * Math.sin(pitch) * Math.sin(yaw),
             -Math.sin(roll) * Math.sin(yaw) + Math.cos(roll) * Math.sin(pitch) * Math.cos(yaw),
             -Math.cos(roll) * Math.cos(pitch)
         ];
