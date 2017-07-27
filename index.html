@@ -35,9 +35,17 @@
             </text>
             <g id="lockTriggerGroup">
                 <circle cx="-85" cy="85" r="12" />
-                <circle cx="-85" cy="85" r="8" />
-                <circle cx="-85" cy="85" r="6" />
-                <circle cx="-85" cy="85" r="4" />
+                <g clip-path="url(#clipTrigger)" transform="translate(-85, 85) rotate(0)">
+                    <clipPath id="clipTrigger">
+                        <circle cx="-0" cy="0" r="10" />
+                    </clipPath>
+                    <line x1="-8" y1="12" x2="-8" y2="-12" />
+                    <line x1="-4" y1="12" x2="-4" y2="-12" />
+                    <line x1="0" y1="12" x2="0" y2="-12" />
+                    <line x1="4" y1="12" x2="4" y2="-12" />
+                    <line x1="8" y1="12" x2="8" y2="-12" />
+                    <line x1="12" y1="12" x2="12" y2="-12" />
+                </g>
             </g>
             <g id="lockToggleGroup">
                 <path id="lockOn" d="M 5 25 L 5 20 A 10 10 0 0 1 25 20 L 25 25" display="none" />
@@ -64,10 +72,10 @@
                 experimental geological compass.
             </p>
             <p>
-                The lower left icon (concentric circles) on the projection locks the measurement when held. This behavior can be inverted
-                by clicking on the upper left icon (open padlock), then the measurement will be locked by default, and released
-                while the circles icon is pressed. To measure lines instead of planes, click on the upper right icon (planar
-                attitude map symbol).
+                The lower left icon (compass trigger) on the projection locks the measurement when held. This behavior can be inverted by clicking
+                on the upper left icon (open padlock), then the measurement will be locked by default, and released while
+                the trigger icon is pressed. To measure lines instead of planes, click on the upper right icon (planar attitude
+                map symbol).
             </p>
             <p>
                 As said before, this compass is highly experimental, and as so should probably not be relied uppon for actual field work.
