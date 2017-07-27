@@ -14,12 +14,6 @@ body {
     "stereo repos academic";
 }
 
-#stereoPlot {
-    height: auto;
-    width: 100%;
-    grid-area: stereo;
-}
-
 #intro-text {
     grid-area: intro;
 }
@@ -56,6 +50,12 @@ p {
 
 a {
     color: #704214;
+}
+
+#stereoPlot {
+    height: auto;
+    width: 100vw;
+    grid-area: stereo;
 }
 
 #lockTriggerGroup {
@@ -120,9 +120,10 @@ svg > g.stereo-element {
     fill:#704214;
 }
 
-
-
 @media (orientation: landscape) {
+    #stereoPlot {
+        width: 100vh;
+    }
 }
 
 @media (orientation: portrait) {
