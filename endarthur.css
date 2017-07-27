@@ -60,19 +60,19 @@ a {
 
 #lockTriggerGroup {
     fill-opacity: 0;
-    stroke: #555f61;
+    stroke: #704214;
     stroke-width: 0.5;
 }
 
 #lockToggleGroup {
     fill-opacity: 0;
-    stroke: #555f61;
+    stroke: #704214;
     stroke-width: 1;
     transform: translate(-92.5px, -95px) scale(0.5);
 }
 
 #planeToggleGroup {
-    stroke: #555f61;
+    stroke: #704214;
     stroke-width: 0.5;
     transform: translate(80px, -80px) rotate(45);
 }
@@ -116,6 +116,7 @@ svg > g.stereo-element {
 
 #projectionText {
     font-size: 8pt;
+    font-weight: lighter;
     fill:#144270;
 }
 
