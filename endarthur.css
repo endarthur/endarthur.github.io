@@ -58,6 +58,25 @@ a {
     color: #704214;
 }
 
+#lockTriggerGroup {
+    fill-opacity: 0;
+    stroke: #555f61;
+    stroke-width: 0.5;
+}
+
+#lockToggleGroup {
+    fill-opacity: 0;
+    stroke: #555f61;
+    stroke-width: 1;
+    transform: translate(-92.5px, -95px) scale(0.5);
+}
+
+#planeToggleGroup {
+    stroke: #555f61;
+    stroke-width: 0.5;
+    transform: translate(80px, -80px) rotate(45);
+}
+
 #stereoDiagram {
     stroke: #555f61;
     stroke-width: 0.005;
@@ -72,9 +91,14 @@ a {
     fill: #373d3f;
 }
 
-#orientationPoint {
+#orientationPlane {
     stroke: none;
     fill: #e9162d;
+}
+
+#orientationLine {
+    stroke: none;
+    fill: #144270;
 }
 
 #stereoLines {
@@ -91,7 +115,7 @@ svg > g.stereo-element {
 }
 
 #projectionText {
-    font-size: 5pt;
+    font-size: 8pt;
     fill:#144270;
 }
 

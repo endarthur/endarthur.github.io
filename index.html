@@ -17,7 +17,7 @@
                 <clipPath id="clipPrimitive">
                     <circle cx="0" cy="0" r="1" />
                 </clipPath>
-                <circle id="stereoCircle" cx="0" cy="0" r="1" fill="none" vector-effects="non-scaling-stroke"></circle>
+                <circle id="stereoCircle" cx="0" cy="0" r="1" fill="none"></circle>
                 <line class="cardinalMarker" x1="0" y1="0.95" x2="0" y2="1.05" />
                 <line class="cardinalMarker" x1="0" y1="-0.95" x2="0" y2="-1.05" />
                 <line class="cardinalMarker" x1="0.95" y1="0" x2="1.05" y2="0" />
@@ -30,19 +30,44 @@
             <g class="stereo-element" id="stereoLines">
                 <polyline id="phone-gc" points="0, 0" />
             </g>
-            <g id="stereoText">
-                <text x="80" y="97" id="projectionText">
-                    130/45
-                </text>
+            <text x="70" y="97" id="projectionText">
+                130/45
+            </text>
+            <g id="lockTriggerGroup">
+                <circle cx="-85" cy="85" r="12" />
+                <circle cx="-85" cy="85" r="8" />
+                <circle cx="-85" cy="85" r="6" />
+                <circle cx="-85" cy="85" r="4" />
+            </g>
+            <g id="lockToggleGroup">
+                <path id="lockOn" d="M 5 25 L 5 20 A 10 10 0 0 1 25 20 L 25 25" display="none" />
+                <path id="lockOff" d="M 25 25 L 25 10 A 10 10 0 0 1 45 10 L 45 20" />
+                <rect x="0" y="25" width="30" height="20" />
+            </g>
+            <g id="planeToggleGroup" transform="translate(80, -80) rotate(45)">
+                <marker id="triangle" viewBox="0 0 10 10" refX="0" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z" />
+                </marker>
+                <line id="planeMeasureOff" x1="-10" y1="0" x2="10" y2="0" marker-end="url(#triangle)" display="none" />
+                <g id="planeMeasureOn">
+                    <line x1="-10" y1="0" x2="10" y2="0" />
+                    <line x1="0" y1="0" x2="0" y2="-5" />
+                </g>
+                <circle cx="0" cy="0" r="10" opacity="0" />
             </g>
         </svg>
         <div id="intro-text">
             <h1>Computatrum et Malleo.</h1>
             <p>I'm Arthur Endlein (endarthur), and consider myself a computer geologist even if such thing may not exist. This
-                page currently works as a lower hemisphere equal-area projection of your device's orientation, as a plane.
-                The reference for the sample data plotted as background is:</p>
-            <p>Tocher, F. E. (1979). The computer contouring of fabric diagrams. Computers &amp; Geosciences, 5(1), 73-126.
-                <a href="https://doi.org/10.1016/0098-3004(79)90019-0">https://doi.org/10.1016/0098-3004(79)90019-0</a>
+                page currently works as a experimental geological compass.</p>
+            <p>
+                The lower left icon (concentric circles) on the projection locks the measurement when held. This behavior can be inverted by clicking
+                on the upper left icon (open padlock), then the measurement will be locked by default, and released while the circles icon is pressed.
+                To measure lines instead of planes, click on the upper right icon (planar attitude map symbol).
+            </p>
+            <p>
+                As said before, this compass is highly experimental, and as so should probably not be relied uppon for actual field work.
+                Might be useful as a teaching aid, though.
             </p>
         </div>
         <div id="github-repos">
@@ -70,6 +95,7 @@
     </div>
 
     <script src="js/autti.js"></script>
+    <script src="js/gyronorm.complete.min.js"></script>
     <script src="tocher.json"></script>
     <script>
         // from https://stackoverflow.com/a/5367656/1457481
@@ -79,45 +105,34 @@
         var at = Auttitude;
         var pointPlot = document.getElementById('stereoPoints');
         var svg = document.getElementById('stereoPlot');
-        for (var i = 0; i < tocher_data.length; i++) {
-            break;
-            var ivec = at.dcosPlane(tocher_data[i]);
-            var projected = at.projectEqualArea(ivec);
-            var point = document.createElementNS(
-                "http://www.w3.org/2000/svg",
-                "circle"
-            );
-            point.setAttribute("class", "plotPoint");
-            point.setAttribute("cx", projected[0]);
-            point.setAttribute("cy", projected[1]);
-            point.setAttribute("r", ".01");
-            pointPlot.appendChild(point);
-        }
-        var point = document.createElementNS(
+        var phoneMarkerPlane = document.createElementNS(
             "http://www.w3.org/2000/svg",
             "circle"
         );
-        var phoneMarker = document.createElementNS(
+        var phoneMarkerLine = document.createElementNS(
             "http://www.w3.org/2000/svg",
             "circle"
         );
         var phone_gc = document.getElementById('phone-gc');
-        phoneMarker.setAttribute("id", "orientationPoint");
-        phoneMarker.setAttribute("cx", 0);
-        phoneMarker.setAttribute("cy", 0);
-        phoneMarker.setAttribute("r", ".03");
-        pointPlot.appendChild(phoneMarker);
+        phoneMarkerPlane.setAttribute("id", "orientationPlane");
+        phoneMarkerPlane.setAttribute("cx", 0);
+        phoneMarkerPlane.setAttribute("cy", 0);
+        phoneMarkerPlane.setAttribute("r", ".03");
+        phoneMarkerLine.setAttribute("id", "orientationLine");
+        phoneMarkerLine.setAttribute("cx", 0);
+        phoneMarkerLine.setAttribute("cy", 0);
+        phoneMarkerLine.setAttribute("r", ".03");
+        phoneMarkerLine.style.display = "none";
+        pointPlot.appendChild(phoneMarkerPlane);
+        pointPlot.appendChild(phoneMarkerLine);
         function handleOrientation(event) {
+            if (needle_lock != lock_toggle) {
+                return;  // needle is locked
+            };
             var orientationVector = at.dcosPlaneEuler([event.alpha, event.beta, event.gamma]);
-            var projected = at.projectEqualArea(
-                orientationVector
-            );
-            phoneMarker.setAttribute("cx", projected[0]);
-            phoneMarker.setAttribute("cy", projected[1]);
-            phone_gc.points.clear();
+            var dipVector = orientationVector.dip_vector();
             var new_gc = orientationVector.great_circle();
-            var sphere = at.spherePlane(orientationVector);
-            document.getElementById("projectionText").innerHTML = padLeft(sphere[0].toFixed(0), 3) + "/" + padLeft(sphere[1].toFixed(0), 2);
+            phone_gc.points.clear();
             for (var i = 0; i < 180; i++) {
                 var proj_gc = at.projectEqualArea(new_gc[i]);
                 var point = svg.createSVGPoint();
@@ -125,8 +140,72 @@
                 point.y = proj_gc[1];
                 phone_gc.points.appendItem(point);
             }
+            if (!plane_toggle){
+                var sphere = at.spherePlane(orientationVector);
+            } else {
+                var sphere = at.sphereLine(dipVector);
+            }
+            document.getElementById("projectionText").innerHTML = padLeft(sphere[0].toFixed(0), 3) + "/" + padLeft(sphere[1].toFixed(0), 2);
+            var projected_plane = at.projectEqualArea(
+                orientationVector
+            );
+            var projected_line = at.projectEqualArea(
+                dipVector
+            );
+            phoneMarkerPlane.setAttribute("cx", projected_plane[0]);
+            phoneMarkerPlane.setAttribute("cy", projected_plane[1]);
+            phoneMarkerLine.setAttribute("cx", projected_line[0]);
+            phoneMarkerLine.setAttribute("cy", projected_line[1]);
         }
-        window.addEventListener('deviceorientation', handleOrientation);
+        var gn = new GyroNorm();
+        var needle_lock = false;
+        var lock_toggle = false;
+        var plane_toggle = false;
+        gn.init({ orientationBase: GyroNorm.WORLD, frequency: 16 }).then(function () {
+            gn.start(function (event) { handleOrientation(event.do) });
+        }).catch(function (e) {
+            window.addEventListener('deviceorientation', handleOrientation);
+        }); // to be able to work on chrome desktop a little easier
+        document.getElementById("lockTriggerGroup").addEventListener("touchstart", function (event) {
+            event.preventDefault();
+            needle_lock = true;
+        });
+        document.getElementById("lockTriggerGroup").addEventListener("touchend", function (event) {
+            event.preventDefault();
+            needle_lock = false;
+        });
+        document.getElementById("lockToggleGroup").addEventListener("touchstart", function (event) {
+            event.preventDefault();
+            if (!lock_toggle) {
+                document.getElementById("lockOn").style.display = "initial";
+                document.getElementById("lockOff").style.display = "none";
+                lock_toggle = true;
+            } else {
+                document.getElementById("lockOn").style.display = "none";
+                document.getElementById("lockOff").style.display = "initial";
+                lock_toggle = false;
+            }
+
+        });
+        document.getElementById("planeToggleGroup").addEventListener("touchstart", function (event) {
+            event.preventDefault();
+            if (!plane_toggle) {
+                document.getElementById("planeMeasureOn").style.display = "none";
+                document.getElementById("planeMeasureOff").style.display = "initial";
+                phoneMarkerPlane.style.display = "none";
+                phoneMarkerLine.style.display = "initial";
+                phone_gc.style.display = "none";
+                plane_toggle = true;
+            } else {
+                document.getElementById("planeMeasureOn").style.display = "initial";
+                document.getElementById("planeMeasureOff").style.display = "none";
+                phoneMarkerPlane.style.display = "initial";
+                phoneMarkerLine.style.display = "none";
+                phone_gc.style.display = "initial";
+                plane_toggle = false;
+            }
+
+        });
     </script>
 </body>
 

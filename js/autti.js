@@ -204,7 +204,7 @@ var Auttitude = (function () {
         }
         return [
             mod(degrees(Math.atan2(x, y)), 360.),
-            degrees(Math.acos(z))
+            degrees(Math.asin(z))
         ];
     }
 
@@ -236,6 +236,7 @@ var Auttitude = (function () {
     Module.dcosPlaneEuler = dcosPlaneEuler;
     Module.spherePlane = spherePlane;
     Module.dcosLine = dcosLine;
+    Module.sphereLine = sphereLine;
     Module.projectEqualArea = projectEqualArea;
     Module.readEqualArea = readEqualArea;
 
