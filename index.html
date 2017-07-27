@@ -237,10 +237,9 @@ SOFTWARE.
                 phone_gc.style.display = "initial";
                 plane_toggle = false;
             }
-            navigator.geolocation.getCurrentPosition(function (position) {
-                document.getElementById("location_test").innerHTML = position.coords.latitude + "/" + position.coords.longitude;
-            });
-            
+        });
+        navigator.geolocation.getCurrentPosition(function (position) {
+            document.getElementById("location_test").innerHTML = position.coords.latitude + "/" + position.coords.longitude;
         });
     </script>
 </body>
