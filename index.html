@@ -201,10 +201,12 @@ SOFTWARE.
         document.getElementById("lockTriggerGroup").addEventListener("touchstart", function (event) {
             event.preventDefault();
             needle_lock = true;
+            //window.navigator.vibrate(50);
         });
         document.getElementById("lockTriggerGroup").addEventListener("touchend", function (event) {
             event.preventDefault();
             needle_lock = false;
+            //window.navigator.vibrate(50);
         });
         document.getElementById("lockToggleGroup").addEventListener("touchstart", function (event) {
             event.preventDefault();
