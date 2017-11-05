@@ -173,6 +173,9 @@ SOFTWARE.
             if (needle_lock != lock_toggle) {
                 return;  // needle is locked
             };
+            if (event.alpha == 0 && event.beta == 0 && event.gamma == 0){
+                return; // point is centralized
+            }
             var orientationVector = at.dcosPlaneEuler([event.alpha, event.beta, event.gamma]);
             var dipVector = orientationVector.dip_vector();
             var new_gc = orientationVector.great_circle();
