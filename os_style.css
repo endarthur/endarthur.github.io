@@ -31,6 +31,10 @@ a {
     "data stereo";
 }
 
+details > input {
+    margin-left: 2em;
+}
+
 #data-list {
     grid-area: data;
 }
