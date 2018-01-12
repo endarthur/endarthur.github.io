@@ -1,0 +1,131 @@
+body {
+    font-family: 'Source Sans Pro', sans-serif;
+    background-color: #F8F8F1;
+}
+
+/* With help from https://www.viget.com/articles/color-contrast */
+h1 {
+    color: #555f61;
+}
+
+h2 {
+    color: #555f61;
+}
+
+p {
+    color:#144270;
+}
+
+a {
+    color: #704214;
+}
+
+
+.container {
+    display: grid;
+    height: 100%;
+    grid-template-columns: 1fr 2fr;
+    /*grid-template-rows: auto 1fr;*/
+    grid-gap: 15px 10px;
+    grid-template-areas: 
+    "data stereo";
+}
+
+#data-list {
+    grid-area: data;
+}
+
+#stereoPlot {
+    height: 100vw;
+    width: 100vw;
+    grid-area: stereo;
+}
+
+#lockTriggerGroup {
+    fill-opacity: 0;
+    stroke: #704214;
+    stroke-width: 0.5;
+}
+
+#lockToggleGroup {
+    fill-opacity: 0;
+    stroke: #704214;
+    stroke-width: 1;
+    transform: translate(-92.5px, -95px) scale(0.5);
+}
+
+#planeToggleGroup {
+    stroke: #704214;
+    stroke-width: 0.5;
+    transform: translate(80px, -80px) rotate(45);
+}
+
+#stereoDiagram {
+    stroke: #555f61;
+    stroke-width: 0.005;
+}
+
+#stereoCircle {
+    fill: none;
+}
+
+.plotPoint {
+    stroke: none;
+    fill: #373d3f;
+}
+
+.plotPoint {
+    r: 0.01;
+    fill: #373d3f;
+}
+
+.plotPoint.plane {
+    fill: #e9162d;
+}
+
+#orientationPlane {
+    stroke: none;
+    fill: #e9162d;
+}
+
+#orientationLine {
+    stroke: none;
+    fill: #144270;
+}
+
+#stereoLines {
+    clip-path: url(#clipPrimitive);
+}
+#phone-gc {
+    fill:none;
+    stroke:#e9162d;
+    stroke-width:.005;
+}
+
+svg > g.stereo-element {
+  transform: scale(100, -100);
+}
+
+#projectionText {
+    font-size: 8pt;
+    font-weight: lighter;
+    fill:#704214;
+}
+
+@media (orientation: landscape) {
+    #stereoPlot {
+        height: 100vh;
+        width: 100vh;
+    }
+}
+
+@media (orientation: portrait) {
+    .container {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr auto auto;
+        grid-template-areas: 
+        "stereo stereo"
+        "intro intro"
+        "repos academic";
+    }
+}

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2017 Arthur Endlein
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" type="text/css" href="ojs_style.css">
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400" rel="stylesheet">
+    <title>endarthur</title>
+</head>
+
+<body>
+    <div class="container">
+        <svg width="100" height="100" id="stereoPlot" viewBox="-110 -110 220 220">
+            <g class="stereo-element" id="stereoDiagram">
+                <clipPath id="clipPrimitive">
+                    <circle cx="0" cy="0" r="1" />
+                </clipPath>
+                <circle id="stereoCircle" cx="0" cy="0" r="1" fill="none"></circle>
+                <line class="cardinalMarker" x1="0" y1="0.95" x2="0" y2="1.05" />
+                <line class="cardinalMarker" x1="0" y1="-0.95" x2="0" y2="-1.05" />
+                <line class="cardinalMarker" x1="0.95" y1="0" x2="1.05" y2="0" />
+                <line class="cardinalMarker" x1="-0.95" y1="0" x2="-1.05" y2="0" />
+                <line class="cardinalMarker" x1="-0.05" y1="0" x2="0.05" y2="0" />
+                <line class="cardinalMarker" x1="0" y1="-0.05" x2="0" y2="0.05" />
+            </g>
+            <g class="stereo-element" id="stereoPoints">
+                <g id="dataPoints"></g>
+            </g>
+            <g class="stereo-element" id="stereoLines">
+                <polyline id="phone-gc" points="0, 0" />
+            </g>
+            <text x="-100" y="97" id="projectionText">
+                130/45
+            </text>
+        </svg>
+        <div id="data-list">
+            <button id="plot_data" onclick="handlePlot()">Plot</button>
+            <input type="file" id="open_data" onchange="processPlaneFile(this.files[0])">
+            <!--
+            <details>
+                <summary>
+                    <input type="checkbox" id="planar0">
+                    <label for="planar0">tocher.txt</label>
+                </summary>
+                <input type="checkbox" id="planar0_vectors" value="vectors">
+                <label for="planar0_vectors">poles to planes</label> <br>
+                <input type="checkbox" id="planar0_gc" value="gc">
+                <label for="planar0_gc">poles to planes</label> <br>
+            </details>
+            <details>
+                <summary>
+                    <input type="checkbox" id="planar1">
+                    <label for="planar1">small.txt</label>
+                </summary>
+                <input type="checkbox" id="planar1_vectors" value="vectors">
+                <label for="planar1_vectors">poles to planes</label> <br>
+                <input type="checkbox" id="planar1_gc" value="gc">
+                <label for="planar1_gc">poles to planes</label> <br>
+            </details>
+            -->
+        </div>
+    </div>
+
+    <script src="js/autti.js"></script>
+    <script src="js/gyronorm.complete.min.js"></script>
+    <script>
+        // from https://stackoverflow.com/a/5367656/1457481
+        function padLeft(nr, n, str) {
+            return Array(n - String(nr).length + 1).join(str || '0') + nr;
+        }
+        var dataPlot = document.getElementById("dataPoints");
+        function plotPoints(attitude) {
+            var projected_point = at.projectEqualArea(
+                at.dcosPlane(attitude)
+            );
+            var dataMarker = document.createElementNS(
+                        "http://www.w3.org/2000/svg",
+                        "circle"
+                    );
+            dataMarker.setAttribute("cx", projected_point[0]);
+            dataMarker.setAttribute("cy", projected_point[1]);
+            dataMarker.setAttribute("class", "plotPoint plane");
+            dataPlot.appendChild(dataMarker);
+            orientationVector = false;
+        }
+        var data_array = [];
+        function processPlaneFile(file){
+            var reader = new FileReader();
+            reader.onload = function(event){
+                attitude_array = [];
+                lines = event.target.result.split("\n");
+                for(var i = 0; i < lines.length; i++){
+                    split_line = lines[i].split(/\s+/); //wow, this actually works!
+                    var dd = parseFloat(split_line[0]);
+                    var d = parseFloat(split_line[1]);
+                    if(isNaN(dd) || isNaN(d)) continue;
+                    attitude_array.push([dd, d]);
+                    // plotPoints([dd, d]);
+                }
+                data_array.push({
+                        "attitude_array":attitude_array,
+                        "check":appendData(file.name, data_array.length),
+                    }
+                );
+            }
+            reader.readAsText(file);
+            // data_array.push(appendData(file.name, data_array.length));
+        }
+        function handlePlot(){
+            while(dataPlot.lastChild) dataPlot.removeChild(dataPlot.lastChild);
+            for(var i=0; i < data_array.length; i++){
+                data = data_array[i];
+                if(data.check.base.checked){
+                    if(data.check.vector.checked){
+                        for(var j=0; j<data.attitude_array.length; j++) {
+                            plotPoints(data.attitude_array[j]);
+                        }
+                    }
+                }
+            }
+        }
+        var data_list = document.getElementById("data-list");
+        function appendData(name, index){
+            var data_id = "planar" + index;
+            var details = document.createElement("details");
+            var summary = document.createElement("summary");
+            var name_check = document.createElement("input");
+            name_check.checked = true;
+            name_check.type = "checkbox";
+            name_check.id = data_id;
+            var name_label = document.createElement("label");
+            name_label.htmlFor = name_check.id;
+            name_label.appendChild(
+                document.createTextNode(name + " (P)")
+            );
+            var vectors_check = document.createElement("input");
+            vectors_check.checked = true;
+            vectors_check.type = "checkbox";
+            vectors_check.id = data_id + "_vectors";
+            var vectors_label = document.createElement("label");
+            vectors_label.htmlFor = vectors_check.id;
+            vectors_label.appendChild(
+                document.createTextNode("poles to planes")
+            );
+            var gc_check = document.createElement("input");
+            gc_check.type = "checkbox";
+            gc_check.id = data_id + "_gc";
+            var gc_label = document.createElement("label");
+            gc_label.htmlFor = gc_check.id;
+            gc_label.appendChild(
+                document.createTextNode("great circles")
+            );
+
+            summary.appendChild(name_check);
+            summary.appendChild(name_label);
+            
+            details.appendChild(summary);
+            details.appendChild(vectors_check);
+            details.appendChild(vectors_label);
+            details.appendChild(document.createElement("br"));
+
+            details.appendChild(gc_check);
+            details.appendChild(gc_label);
+
+            data_list.appendChild(details);
+            return {
+                "root":details,
+                "base":name_check,
+                "vector":vectors_check,
+                "gc":gc_check
+            };
+        }
+        var fileInputElement = document.getElementById("open_data");
+        var at = Auttitude;
+        var pointPlot = document.getElementById('stereoPoints');
+        var svg = document.getElementById('stereoPlot');
+    </script>
+</body>
+
+</html>
