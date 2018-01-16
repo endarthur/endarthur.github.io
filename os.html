@@ -146,6 +146,7 @@ SOFTWARE.
         function appendData(name, index){
             var data_id = "planar" + index;
             var details = document.createElement("details");
+            details.open = true;
             var summary = document.createElement("summary");
             var name_check = document.createElement("input");
             name_check.checked = true;
