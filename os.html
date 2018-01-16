@@ -58,7 +58,7 @@ SOFTWARE.
         </svg>
         <div id="data-list">
             <button id="plot_data" onclick="handlePlot()">Plot</button>
-            <input type="file" id="open_data" onchange="processPlaneFile(this.files[0])">
+            <input type="file" id="open_data" onchange="handleFiles(this.files)" multiple>
             <!--
             <details>
                 <summary>
@@ -107,6 +107,11 @@ SOFTWARE.
             orientationVector = false;
         }
         var data_array = [];
+        function handleFiles(files){
+            for(var i=0; i < files.length; i++){
+                processPlaneFile(files[i]);
+            }
+        }
         function processPlaneFile(file){
             var reader = new FileReader();
             reader.onload = function(event){
