@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,108 +8,118 @@
     <title>Practical Desurvey</title>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML' async></script>
     <style>
-            .content {
-              max-width: 960px;
-              margin: auto;
-            }
+        .content {
+            max-width: 960px;
+            margin: auto;
+        }
     </style>
 </head>
+
 <body>
     <div class="content">
-    <h1>Practical Desurvey</h1>
-    <nav>
-        <a href="../index.html">Home</a>
-    </nav>
-    <span id="page-created">created: <em>2019-06-27</em></span>
-    <span id="page-modified">modified: <em>2019-06-27</em></span>
-    <h2>Introduction</h2>
-    <p>
-        Desurvey is the practice of obtaining the geometry of a drillhole through
-        its deviation survey data.
-    </p>
-    <p>
-        Here we present two methods: <a href="#tangent-method">tangent</a> and <a href="#spherical-arc">spherical arc</a>.
-        <!-- Both are implementedin javascript and python, MIT licensed. -->
-    </p>
-    <h2>Definitions</h2>
+        <h1>Practical Desurvey</h1>
+        <nav>
+            <a href="../index.html">Home</a>
+        </nav>
+        <span id="page-created">created: <em>2019-06-27</em></span>
+        <span id="page-modified">modified: <em>2019-06-27</em></span>
+        <h2>Introduction</h2>
+        <p>
+            Desurvey is the practice of obtaining the geometry of a drillhole through
+            its deviation survey data.
+        </p>
+        <p>
+            Here we present two methods: <a href="#tangent-method">tangent</a> and <a href="#spherical-arc">spherical
+                arc</a>.
+            <!-- Both are implementedin javascript and python, MIT licensed. -->
+        </p>
+        <h2>Definitions</h2>
         Considering a right-handed coordinate system, with \(x\) pointing east, \(y\) north and \(z\) up,
         <ul>
             <li>
-                \(x_i\) &mdash; the spatial location vector of each survey point, being \(x_0\) given as the collar of the drillhole.
+                \(x_i\) &mdash; the spatial location vector of each survey point, being \(x_0\) given as the collar of
+                the drillhole.
             </li>
             <li>
-                \(v_i\) &mdash; the plunge vector of the drillhole at the survey points. It is usually calculated from the measured
+                \(v_i\) &mdash; the plunge vector of the drillhole at the survey points. It is usually calculated from
+                the measured
                 trend \(\theta\) and plunge \(\phi\), with positive plunge downwards:
-                    $$
-                        v_i = \begin{bmatrix}
-                        \sin(\theta)\cos(\phi)\\
-                        \cos(\theta)\cos(\phi)\\
-                        -\sin(\phi)\\
-                        \end{bmatrix}.
-                    $$
+                $$
+                v_i = \begin{bmatrix}
+                \sin(\theta)\cos(\phi)\\
+                \cos(\theta)\cos(\phi)\\
+                -\sin(\phi)\\
+                \end{bmatrix}.
+                $$
             </li>
             <li>
                 \(a_i\) &mdash; the position along the drillhole on where each survey was made.
             </li>
             <li>
                 \(s_i\) &mdash; the length of the segment between each \(i\) and \(i+1\) survey points, that is,
-                    $$s_i = a_{i+1} - a_i.$$
+                $$s_i = a_{i+1} - a_i.$$
             </li>
         </ul>
-    <a name="tangent-method"></a>
-    <h2><a href="#tangent-method">Tangent</a></h2>
+        <a name="tangent-method"></a>
+        <h2><a href="#tangent-method">Tangent</a></h2>
         <p>
             The simplest method is to consider the drillhole a sequence of straight segments
-            with the same down-hole orientation as the last survey point. For that, we simply accumulate \(s_i v_i\) from \(x_0\) to
+            with the same down-hole orientation as the last survey point. For that, we simply accumulate \(s_i v_i\)
+            from \(x_0\) to
             obtain each \(x_{i+1}\) in sequence:
-                $$
-                    x_{i+1} = x_0 + \sum_{j=0}^{i} s_j v_j. 
-                $$
+            $$
+            x_{i+1} = x_0 + \sum_{j=0}^{i} s_j v_j.
+            $$
         </p>
         <p>
-            To obtain the coordinates of an arbitrary point \(p\) at position \(d\) along the drillhole find \(i\) such that
+            To obtain the coordinates of an arbitrary point \(p\) at position \(d\) along the drillhole find \(i\) such
+            that
             \(a_{i+1} > d\), then
-                $$
-                    p = x_i + (d - a_i) v_i. \label{tangent}\tag{1}
-                $$
+            $$
+            p = x_i + (d - a_i) v_i. \label{tangent}\tag{1}
+            $$
         </p>
-    <a name="spherical-arc"></a>
-    <h2><a href="#spherical-arc">Spherical arc</a></h2>
+        <a name="spherical-arc"></a>
+        <h2><a href="#spherical-arc">Spherical arc</a></h2>
         <p>
-            The spherical arc method, also known as minimum curvature, treats each segment of the drillhole as a great circle arc with
-            length \(s_i\) that encompass the angle \(\alpha_i\) between each survey point \(i\) and its successor \(i+1\). Being \(\alpha\)
+            The spherical arc method, also known as minimum curvature, treats each segment of the drillhole as a great
+            circle arc with
+            length \(s_i\) that encompass the angle \(\alpha_i\) between each survey point \(i\) and its successor
+            \(i+1\). Being \(\alpha\)
             in radians, the radius \(r_i\) of the sphere can be calculated as
-                $$
-                    r_i = {s_i \over \alpha_i}
-                $$
+            $$
+            r_i = {s_i \over \alpha_i}
+            $$
         </p>
         <p>
-            To obtain the center \(c_i\) of the sphere, we must offset \(x_i\) a distance \(r_i\) perpendicular to \(v_i\) on the plane
+            To obtain the center \(c_i\) of the sphere, we must offset \(x_i\) a distance \(r_i\) perpendicular to
+            \(v_i\) on the plane
             spanning \(v_i\) and \(v_{i+1}\). The normal \(n_i\) to this plane is obtained through
-                $$
-                    n_i = {{v_i \times v_{i+1}} \over {|v_i \times v_{i+1}|}}
-                $$
+            $$
+            n_i = {{v_i \times v_{i+1}} \over {|v_i \times v_{i+1}|}}
+            $$
         </p>
         <p>
             from this, the vector \(q_i\) perpendicular to \(v_i\) is simply
-                $$ q_i = n_i \times v_i $$
+            $$ q_i = n_i \times v_i $$
         </p>
         <p>
             being the center then
-                $$
-                    c_i = x_i + r n_i \times v_i.
-                $$
+            $$
+            c_i = x_i + r n_i \times v_i.
+            $$
         </p>
         <p>
-            Using \(v_i\) and \(q_i\) as an orthogonal pair spanning the plane, the position of the next survey point \(x_{i+1}\) is built as
-                $$
-                    x_{i+1} = c_i - r q_i cos (\alpha_i) + r v_i sin (\alpha_i) \label{sphere_survey}\tag{2}
-                $$
+            Using \(v_i\) and \(q_i\) as an orthogonal pair spanning the plane, the position of the next survey point
+            \(x_{i+1}\) is built as
+            $$
+            x_{i+1} = c_i - r q_i cos (\alpha_i) + r v_i sin (\alpha_i) \label{sphere_survey}\tag{2}
+            $$
         </p>
         <p>
             Similarly, an arbitrary point \(p\) at position \(d\) along the drillhole is found using \(i\) such that
             \(a_{i+1} > d\). Its angular position \(\theta\) along the great circle is
-                $$ \theta = {{d - a_i} \over r_i} $$
+            $$ \theta = {{d - a_i} \over r_i} $$
         </p>
         <p>
             This angle can be plugged into equation \(\ref{sphere_survey}\) instead of \(\alpha\) so that we get
@@ -133,11 +144,11 @@
                 <a href="https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">The dark art of drillhole desurveying, from the leapfrog3d blog</a>
                 (<a href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">internet archive</a>)
             </li>
+            <li><a href="http://home.btconnect.com/SiliconDale/silicon13.htm">Drillhole De-Surveying, from Steve Henley's blog</a>
+                (<a href="https://web.archive.org/web/20190628214612/http://home.btconnect.com/SiliconDale/silicon13.htm">internet archive</a>)
+            </li>
         </ul>
-    <h2>Comments?</h3>
-    <p>
-        For now, email me and I'll add them to the page.
-    </p>
+    <h2> <a href="https://github.com/endarthur/endarthur.github.io/issues/2">Comments</a></h3>
     </div>
 </body>
 </html>
