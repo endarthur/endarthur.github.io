@@ -22,7 +22,7 @@
             <a href="../index.html">Home</a>
         </nav>
         <span id="page-created">created: <em>2019-06-27</em></span>
-        <span id="page-modified">modified: <em>2019-06-27</em></span>
+        <span id="page-modified">modified: <em>2019-06-28</em></span>
         <h2>Introduction</h2>
         <p>
             Desurvey is the practice of obtaining the geometry of a drillhole through
@@ -49,7 +49,7 @@
                 \sin(\theta)\cos(\phi)\\
                 \cos(\theta)\cos(\phi)\\
                 -\sin(\phi)\\
-                \end{bmatrix}.
+                \end{bmatrix}
                 $$
             </li>
             <li>
@@ -57,7 +57,7 @@
             </li>
             <li>
                 \(s_i\) &mdash; the length of the segment between each \(i\) and \(i+1\) survey points, that is,
-                $$s_i = a_{i+1} - a_i.$$
+                $$s_i = a_{i+1} - a_i$$
             </li>
         </ul>
         <a name="tangent-method"></a>
@@ -68,7 +68,7 @@
             from \(x_0\) to
             obtain each \(x_{i+1}\) in sequence:
             $$
-            x_{i+1} = x_0 + \sum_{j=0}^{i} s_j v_j.
+            x_{i+1} = x_0 + \sum_{j=0}^{i} s_j v_j
             $$
         </p>
         <p>
@@ -76,7 +76,7 @@
             that
             \(a_{i+1} > d\), then
             $$
-            p = x_i + (d - a_i) v_i. \label{tangent}\tag{1}
+            p = x_i + (d - a_i) v_i \label{tangent}\tag{1}
             $$
         </p>
         <a name="spherical-arc"></a>
@@ -84,7 +84,8 @@
         <p>
             The spherical arc method, also known as minimum curvature, treats each segment of the drillhole as a great
             circle arc with
-            length \(s_i\) that encompass the angle \(\alpha_i\) between each survey point \(i\) and its successor
+            length \(s_i\) that encompass the angle<sup><a href="#fn1" id="ref1">1</a></sup> \(\alpha_i\) between each
+            survey point \(i\) and its successor
             \(i+1\). Being \(\alpha\)
             in radians, the radius \(r_i\) of the sphere can be calculated as
             $$
@@ -127,17 +128,18 @@
                     p = c_i - r q_i cos (\theta) + r v_i sin (\theta) \label{sphere}\tag{3}
                 $$
         </p>
-    <h2>Practical issues</h2>
-        <p>
-            Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
-            for the segment instead of spherical arc, as the numerical precision might blow up and give you bad results.
-        </p>
-        <p>
-            On the subject of angles, you can either use the arccosine of the dot product or the arctangent of the magnitude of
-            the cross product over the dot product. The second method is much more precise for small angles and will allow you to
-            use a closer tolerance before considering that the angle between two survey points is zero. It's costlier in terms
-            of processing, though.
-        </p>
+        <hr></hr>
+        <sup id="fn1">
+            <p>1. Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
+                for the segment instead of spherical arc, as the numerical precision might blow up and give you bad results.
+            </p>
+            <p>
+                On the subject of angles, you can either use the arccosine of the dot product or the arctangent of the magnitude of
+                the cross product over the dot product. The second method is much more precise for small angles and will allow you to
+                use a closer tolerance before considering that the angle between two survey points is zero. It's costlier in terms
+                of processing, though.
+                <a href="#ref1" title="Jump back to footnote 1 in the text.">&#8617;</a>
+            </p></sup>
     <h2>References</h2>
         <ul>
             <li>
