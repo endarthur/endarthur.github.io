@@ -7,11 +7,12 @@ body {
     display: grid;
     height: 100%;
     grid-template-columns: 2fr 1fr 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto 1fr 1fr;
     grid-gap: 15px 10px;
     grid-template-areas: 
     "stereo intro intro"
-    "stereo repos academic";
+    "stereo repos academic"
+    "stereo writting .";
 }
 
 #intro-text {
@@ -24,6 +25,10 @@ body {
 
 #academic {
     grid-area: academic;
+}
+
+#writting {
+    grid-area: writting;
 }
 
 ul.base-list {
@@ -130,10 +135,11 @@ svg > g.stereo-element {
 @media (orientation: portrait) {
     .container {
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr auto auto;
+        grid-template-rows: 1fr auto auto auto;
         grid-template-areas: 
         "stereo stereo"
         "intro intro"
-        "repos academic";
+        "repos academic"
+        "writting writting";
     }
 }
