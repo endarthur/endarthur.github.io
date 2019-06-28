@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>About this</title>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML' async></script>
+    <style>
+        .content {
+            max-width: 960px;
+            margin: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="content">
+        <h1>About this</h1>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href=".">Site</a>
+        </nav>
+        <span id="page-created">created: <em>2019-06-28</em></span>
+        <span id="page-modified">modified: <em>2019-06-28</em></span>
+        <h2>"Design"</h2>
+        <p>
+            So, my strongest influences currently are <a href="https://www.gwern.net/">Gwern</a> and
+            <a href="https://www.alicemaz.com/">Alice Maz</a>, using the footnotes idea from
+            <a href="https://daringfireball.net/2005/07/footnotes">daring fireball</a> <sup>(<a
+                    href="https://web.archive.org/web/20190628221915/https://daringfireball.net/2005/07/footnotes">ia</a>)</sup>
+            through <a href="https://karlwinegardner.blogspot.com/2011/02/how-to-create-footnotes-in-html.html">Karl
+                Winegardner</a><sup>(<a
+                    href="https://web.archive.org/web20190628222122/http://karlwinegardner.blogspot.com/2011/02/how-to-create-footnotes-in-html.html">ia</a>)</sup><sup><a
+                    href="#fn1" id="ref1">1</a></sup>.
+        </p>
+        <p>
+            Considering Gwern's own <a href="https://www.gwern.net/About">"about this site"</a> writtings on
+            page archiving, I've also added <a href="https://archive.org/web/">internet archive</a> links for the links
+            referenced, and if inline marked with <sup>(ia)</sup>. I am also using the idea of adding a "created" and
+            "modified" timestamps on top of the page, to help me remember when I started.
+        </p>
+        <p>
+            Most html is handwritten, as are the svg figures. I'll also add some interactivity through javascript, as in
+            the index.html page. That was born the day I realised that I should probably have a business card, and got
+            thinking about what could I do to make it somewhat useful. So my web geological compass was born. A crazier
+            version is hosted on <a href="https://surge.sh/">surge</a>, <a href="https://digikom.surge.sh/">Digikom</a>.
+        </p>
+        <p>
+            Write-up on that someday?
+        </p>
+        <p>
+            I'm using mathjax to render math in general using LaTeX notation. There is a really small subset of my
+            directional data analysis library reimplemented in javascript, <a href="js/autti.js">autti.js</a>. For
+            now it doesn't really provide that much functionality, mostly implement a simple directional vector class.
+        </p>
+        <p>
+            Next idea for that is using it for a small page on directional data handling, with some interactive
+            "calculators".
+        </p>
+        <h2>Tracking</h2>
+        <p>
+            This website is a static github page. I'm not tracking anything, and don't intend on ever doing that. Using
+            github issues as a comment system seems a reasonable method to allow feedback, though you can just email me
+            at gmail, as endarthur. Or tweet.
+        </p>
+        <h2>Map</h2>
+        <a href="index.html">Home</a>
+        <h3>writting</h3>
+        <ul>
+            <li>
+                <a href="writting/desurvey.html">practical desurvey</a>
+            </li>
+        </ul>
+        <h3>In develompent</h3>
+        <ul>
+            <li>
+                <a href="os.html">os.html</a> &mdash; someday to be a page to plot directional data. Missing a lot, but can plot
+                multiple planar datasets, so not completely useless?
+            </li>
+        </ul>
+        <hr>
+        <sup id="fn1">
+            <p>1. They are really nice and easy to use! <a href="#ref1"
+                    title="Jump back to footnote 1 in the text.">&#8617;</a>
+            </p>
+        </sup>
+        <h2><a href="https://github.com/endarthur/endarthur.github.io/issues/3">Comments</a></h2>
+    </div>
+</body>
+
+</html>
