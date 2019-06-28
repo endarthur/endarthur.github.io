@@ -48,7 +48,7 @@ var Auttitude = (function () {
     }
 
     Vector.prototype.angle = function (other) {
-        return Math.acos(this.dot(other) / (this.norm * other.norm));
+        return Math.acos(this.dot(other) / (this.norm() * other.norm()));
     }
 
     Vector.prototype.cross = function (other) {
