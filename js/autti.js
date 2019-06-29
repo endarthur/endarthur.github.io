@@ -128,16 +128,32 @@ var Auttitude = (function () {
         return this.cross(this.direction_vector());
     }
 
-    Vector.prototype.great_circle = function (n) {
+    Vector.prototype.great_circle = function (n, fullcircle) {
         if (typeof (n) === 'undefined') n = 180.;
+        if (typeof (fullcircle) === 'undefined') fullcircle = false;
+        var theta_range = fullcircle? 2*Math.PI : Math.PI;
         var result = [];
         dip = this.dip_vector();
         dir = this.direction_vector();
         for (var i = 0; i <= n; i++) {
-            theta = 2*Math.PI * i / n;
+            theta = theta_range * i / n;
             result.push(
                 dir.times(Math.cos(theta)).plus(
                     dip.times(Math.sin(theta))
+                )
+            );
+        }
+        return result;
+    }
+
+    Vector.prototype.arc_to = function(other, step){
+        if (typeof (step) === 'undefined') step = 0.017453292519943295;
+        let aux = this.cross(other).cross(this).normalized();
+        var result = [];
+        for (var t = 0; t <= this.angle(other); t += step){
+            result.push(
+                this.times(Math.cos(t)).plus(
+                    aux.times(Math.sin(t))
                 )
             );
         }

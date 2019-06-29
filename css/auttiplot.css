@@ -1,0 +1,16 @@
+.stereo-primitive {
+    fill: none;
+    stroke: #555f61;
+    stroke-width: 1.0;
+}
+
+.stereo-point {
+    r: 3;
+    fill: #373d3f;
+}
+
+.stereo-line {
+    fill:none;
+    stroke:#e9162d;
+    stroke-width:.5;
+}
