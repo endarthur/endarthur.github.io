@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>VR on a model following a path</title>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML' async></script>
+    <!-- <link rel="stylesheet" type="text/css" href="../css/auttiplot.css"> -->
+</head>
+
+<body>
+    <div class="content">
+        <h1>VR on a model following a path</h1>
+        <nav>
+            <a href="../index.html">Home</a>
+            <a href="../site.html">Site</a>
+        </nav>
+        <span id="page-created">created: <em>2019-06-28</em></span>
+        <span id="page-modified">modified: <em>2019-06-29</em></span>
+        <h2>Introduction</h2>
+        <p>
+            Here we build a very simple guided VR tour on a model.
+        </p>
+        <input type="file" id="open_data" onchange="handleFiles(this.files)" multiple>
+        <hr>
+        <!-- <sup id="fn1">
+            <p>1. Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
+                for the segment instead of spherical arc, as the numerical precision might blow up and give you bad results.
+            </p>
+            <p>
+                On the subject of angles, you can either use the arccosine of the dot product or the arctangent of the magnitude of
+                the cross product over the dot product. The second method is much more precise for small angles and will allow you to
+                use a closer tolerance before considering that the angle between two survey points is zero. It's costlier in terms
+                of processing, though.
+                <a href="#ref1" title="Jump back to footnote 1 in the text.">&#8617;</a>
+            </p></sup> -->
+        <h2>References</h2>
+        <!--
+        <ul>
+            <li>
+                <a href="https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">The dark art of
+                    drillhole desurveying, from the leapfrog3d blog</a>
+                (<a
+                    href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">internet
+                    archive</a>)
+            </li>
+            <li><a href="http://home.btconnect.com/SiliconDale/silicon13.htm">Drillhole De-Surveying, from Steve
+                    Henley's blog</a>
+                (<a
+                    href="https://web.archive.org/web/20190628214612/http://home.btconnect.com/SiliconDale/silicon13.htm">internet
+                    archive</a>)
+            </li>
+        </ul>
+-->
+        <h2> <a href="https://github.com/endarthur/endarthur.github.io/issues/5">Comments</a></h3>
+    </div>
+    <script src="../js/autti.js"></script>
+    <script src="../js/auttiplot.js"></script>
+    <script>
+        function handleFiles(files) {
+            for (var i = 0; i < files.length; i++) {
+                handlePP(files[i]);
+            }
+        }
+        function download(filename, text) {
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+        // https://stackoverflow.com/a/36607971
+        function generatePage(parsed_points, model_file, time_length, model_scale) {
+            return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>A-Frame Path Viewer</title>
+    <meta name="description" content="A-Frame Path Viewer">
+    <script src="https://aframe.io/releases/0.9.2/aframe.js"><\/script>
+    <script src="//cdn.rawgit.com/donmccurdy/aframe-extras/v6.0.0/dist/aframe-extras.min.js"><\/script>
+</head>
+<body>
+<script>
+    //https://jsbin.com/dasefeh/edit?html,output
+    //https://stackoverflow.com/a/39518746
+(function() {
+'use strict';
+
+
+
+var alongpathComp = {
+schema: {
+    path     : { default: ''    },
+    closed   : { default: false },
+    dur      : { default: 1000  }
+},
+
+init: function() {
+    var ent = this.el;
+    var d = this.data;
+    var points = d.path.split(' ').map(function(p) {
+        p = p.split(',');
+        return new THREE.Vector3(
+            parseFloat(p[0]),
+            parseFloat(p[1]),
+            parseFloat(p[2])
+        );
+    });
+    var ctor = d.closed ? 'ClosedSplineCurve3' : 'SplineCurve3';
+    var curve = new THREE[ctor](points);
+
+    var onFrame = function onFrame(t) {
+        window.requestAnimationFrame(onFrame);
+        t = t % d.dur;
+        var i = t / d.dur;
+        try {
+        var p = curve.getPoint(i);
+        ent.setAttribute('position', p);
+        } catch (ex) {}
+    };
+
+    onFrame();
+},
+
+update: function(oldData) {},
+
+remove: function() {}
+};
+
+AFRAME.registerComponent('alongpath', alongpathComp);
+
+})();
+<\/script>
+    <a-scene>
+        <a-assets>
+            <a-asset-item id="model-data" src="${model_file}">
+        </a-assets>
+        <a-entity id="rig"
+        alongpath="path: ${parsed_points.join(" ")}; closed:true; dur: ${time_length}"
+        position="0 0 0">
+<a-entity camera
+            position="0 $height 0"
+            look-controls="pointerLockEnabled: true"></a-entity>
+</a-entity>
+    <a-gltf-model src="#model-data" scale="${model_scale} ${model_scale} ${model_scale}" position="0 0 0"></a-gltf-model>
+    <a-sky color="#ECECEC"></a-sky>
+    </a-scene>
+</body>
+</html>`;
+        }
+        function handlePP(file) {
+            var reader = new FileReader();
+            reader.onload = function (event) {
+                parsed_points = [];
+                parser = new DOMParser();
+                xmlDoc = parser.parseFromString(event.target.result, "text/xml");
+                points = xmlDoc.getElementsByTagName("point");
+                for (let i = 0; i < points.length; i++) {
+                    const element = points[i];
+                    parsed_points.push([
+                        parseFloat(element.getAttribute("x")),
+                        parseFloat(element.getAttribute("y")),
+                        parseFloat(element.getAttribute("z"))
+                    ].join(","));
+                }
+                var generated_page = generatePage(parsed_points, "quarry_slope/scene.gltf", 150000, 1.0);
+                download("index.html", generated_page);
+            }
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+
+</html>
