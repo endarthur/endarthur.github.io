@@ -45,10 +45,12 @@
             <a href="../site.html">Site</a>
         </nav>
         <span id="page-created">created: <em>2019-06-28</em></span>
-        <span id="page-modified">modified: <em>2019-06-29</em></span>
+        <span id="page-modified">modified: <em>2019-06-30</em></span>
         <h2>Introduction</h2>
         <svg width="300" height="300" id="stereo1">
         </svg>
+        <input type="number" min="0" max="360" value="120" oninput="movePoint(this, 0)"/>
+        <input type="number" min="0" max="90" value="30" oninput="movePoint(this, 1)"/>
         <hr>
         <!-- <sup id="fn1">
             <p>1. Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
@@ -85,18 +87,43 @@
     <script src="../js/auttiplot.js"></script>
     <script>
         var at = Auttitude;
-        var plt = new auttiplot.EqualArea("stereo1", false);
-        
-        var a = at.dcosPlane([275, 60]);
-        var b = at.dcosPlane([85, 60]);
-        
-        plt.as_point(a);
-        plt.as_point(b);
-//        plt.as_line(a.great_circle());
-//        plt.as_line(b.great_circle());
-        plt.as_line(a.arc_to(b));
-        
+        var plt = new auttiplot.EqualArea("stereo1", true);
+        var point_attitude = [120, 30];
+        var a = at.dcosPlane(point_attitude);
+        var point_marker = plt.as_point(a);
+        var gc_line = plt.as_line(a.great_circle());
+        var movePoint = function(slider, index){
+            point_attitude[index] = slider.value;
+            var p = at.dcosPlane(point_attitude);
+            plt.svg.removeChild(point_marker);
+            plt.svg.removeChild(gc_line);
+            point_marker = plt.as_point(p);
+            gc_line = plt.as_line(p.great_circle());
+        }
+//        var a = at.dcosPlane([275, 60]);
+//        var b = at.dcosPlane([85, 60]);
+//        
+//        plt.as_point(a);
+//        plt.as_point(b);
+////        plt.as_line(a.great_circle());
+////        plt.as_line(b.great_circle());
+//        plt.as_line(a.arc_to(b));
+        // var points_list = [];
+        // for (var t = 0; t < 360; t+=360/7){
+        //     points_list.push(at.dcosLine([t, 30]));
+        // }
+        // points_list.forEach(point => {
+        //     plt.as_point(point);
+        // });
+        // for (let i = 0; i < points_list.length; i++) {
+        //     plt.as_line(points_list[i].arc_to(points_list[(i+2)%points_list.length]));
+        // }
 //        plt.as_point(a.cross(b).normalized());
+    </script>
+    <script type="module">
+    import * as autti from './modules/autti.js';
+    var xyzy = autti.Plane.from_attitude(120, 30);
+    // https://stackoverflow.com/a/56738910
     </script>
 </body>
 
