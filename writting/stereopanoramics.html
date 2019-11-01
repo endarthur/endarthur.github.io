@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!--
+MIT License
+
+Copyright (c) 2019 Arthur Endlein
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Stereopanoramics</title>
+  </head>
+  <body>
+    <div id="screenshot">
+      <video autoplay></video>
+      <canvas id="right"></canvas>
+      <canvas id="left"></canvas>
+      <button id="capture-button">Capture video</button>
+    </div>
+    <!-- <script src="js/gyronorm.complete.min.js"></script> -->
+    <script>
+      const captureVideoButton = document.querySelector("#capture-button");
+      const video = document.querySelector("#screenshot video");
+
+      const right = document.querySelector("#right");
+      const left = document.querySelector("#left");
+      let right_ctx, left_ctx;
+
+      const constraints = { video: { facingMode: "environment" } };
+
+      const azimuth_resolution = 720;
+      var disparity = 60;
+      var h;
+      var li, ri;
+
+      var plunge = new Float32Array(azimuth_resolution);
+
+      captureVideoButton.addEventListener("mouseup", function(e) {
+        navigator.mediaDevices.getUserMedia(constraints).then(handleSuccess);
+      });
+
+      function handleClick() {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0);
+        // Other browsers will fall back to image/png
+        // img.src = canvas.toDataURL('image/webp');
+      }
+
+      screenshotButton.addEventListener("mouseup", handleClick);
+      video.addEventListener("mouseup", handleClick);
+
+      function handleSuccess(stream) {
+        screenshotButton.disabled = false;
+        video.srcObject = stream;
+        console.log(stream.getVideoTracks()[0].getSettings().height);
+        h = stream.getVideoTracks()[0].getSettings().height;
+        right.height = h;
+        left.height = h;
+        right.width = azimuth_resolution;
+        left.width = azimuth_resolution;
+        right_ctx = right.getContext("2d");
+        left_ctx = left.getContext("2d");
+
+        ri = Math.floor((h * 2) / 3);
+        li = Math.floor(h / 3);
+        window.addEventListener("deviceorientation", handleOrientation);
+        /*   gn.init({ orientationBase: GyroNorm.WORLD, frequency: 16 }).then(function () {
+    gn.start(function (event) { handleOrientation(event.do) });
+  }).catch(function (e) {
+    window.addEventListener('deviceorientation', handleOrientation);
+  }); */
+      }
+
+      //   var gn = new GyroNorm();
+
+      function handleOrientation(e) {
+        let az = e.alpha;
+        const i = Math.floor(
+          (((az + 360.0) % 360.0) * azimuth_resolution) / 360.0
+        );
+        if (plunge[i] === 0.0) {
+          plunge[i] = 1;
+          right_ctx.drawImage(video, ri, 0, 1, h, i, 0, 1, h);
+          left_ctx.drawImage(video, li, 0, 1, h, i, 0, 1, h);
+        }
+      }
+    </script>
+  </body>
+</html>
