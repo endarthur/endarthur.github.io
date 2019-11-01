@@ -58,19 +58,7 @@ SOFTWARE.
         navigator.mediaDevices.getUserMedia(constraints).then(handleSuccess);
       });
 
-      function handleClick() {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext("2d").drawImage(video, 0, 0);
-        // Other browsers will fall back to image/png
-        // img.src = canvas.toDataURL('image/webp');
-      }
-
-      screenshotButton.addEventListener("mouseup", handleClick);
-      video.addEventListener("mouseup", handleClick);
-
       function handleSuccess(stream) {
-        screenshotButton.disabled = false;
         video.srcObject = stream;
         console.log(stream.getVideoTracks()[0].getSettings().height);
         h = stream.getVideoTracks()[0].getSettings().height;
