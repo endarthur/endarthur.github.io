@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Polygon Conversion</title>
+    <style>
+      .content {
+        max-width: 960px;
+        margin: auto;
+      }
+      #mapid {
+        height: 360px;
+      }
+    </style>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+      integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+      integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+      crossorigin=""
+    ></script>
+  </head>
+  <body>
+    <div class="content">
+    <form>
+      <!-- <p>
+            <input id="model-scale" type="number" min="0" value="1.0" />
+            <label for="model-scale">scale</label>
+        </p>
+        <p>
+            <input type="number" id="camera-height" value="10.0">
+            <label for="camera-height">camera height</label>
+        </p>
+        <p>
+            <input type="number" id="path-duration" value="300">
+            <label for="path-duration">duration (in seconds)</label>
+        </p> -->
+      <p>
+        <label for="pp-file">vertices file</label>
+        <input
+          type="file"
+          id="vertices-file"
+          onchange="setVertices(this.files)"
+        />
+        <!-- accept=".pp" -->
+      </p>
+      <p>
+        <button
+          type="button"
+          id="download-button"
+          onclick="downloadProcessed()"
+          disabled
+        >
+          download csv
+        </button>
+      </p>
+      <p>
+        <textarea
+          name="vertices-in"
+          id="vertices-in"
+          cols="80"
+          rows="10"
+          oninput="onInputVertices()"
+        ></textarea>
+      </p>
+      <p>
+        <textarea
+          name="vertices-out"
+          id="vertices-out"
+          cols="80"
+          rows="10"
+        ></textarea>
+      </p>
+    </form>
+    <div id="mapid"></div>
+    </div>
+    <script>
+      var vertices_in = document.getElementById("vertices-in");
+      var vertices_out = document.getElementById("vertices-out");
+      var download_button = document.getElementById("download-button");
+      var vertices_fname = "vertices";
+      var csv_out = "";
+
+      var polygon = null;
+
+      var map = L.map("mapid").setView([-21.1909, -44.3282], 13);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      function setVertices(files) {
+        let file = files[0];
+        var reader = new FileReader();
+        reader.onload = function(event) {
+          let vertices_text = event.target.result;
+          vertices_in.value = vertices_text;
+          parseVertices(vertices_text);
+          vertices_fname = file.name;
+        };
+        reader.readAsText(file);
+      }
+
+      function onInputVertices() {
+        parseVertices(vertices_in.value);
+      }
+
+      function parseVertices(text) {
+        let parsed_array = [];
+          let polygon_vertices = [];
+          let lines = text.split("\n");
+          for (var i = 1; i < lines.length; i++) {
+            if (!lines[i]) continue;
+            split_line = lines[i].split(/,/); //wow, this actually works!
+            // 1,45° 11' 55.2800" W,22° 49' 14.7073" S,60.548 m,---,90.0°
+            let [lod, lom, los, E] = split_line[1].split(" ");
+            let [lad, lam, las, N] = split_line[2].split(" ");
+            let [loss, losdcm] = los.slice(0, -1).split(".");
+            let [lass, lasdcm] = las.slice(0, -1).split(".");
+            parsed_array.push(
+              `${N == "N" ? "+" : "-"};${lad
+                .slice(0, -1)
+                .padStart(3, "0")};${lam.slice(0, -1)};${lass};${lasdcm
+                .slice(0, 3)
+                .padEnd(3, "0")};` +
+                `${E == "E" ? "+" : "-"};${lod
+                  .slice(0, -1)
+                  .padStart(3, "0")};${lom.slice(0, -1)};${loss};${losdcm
+                  .slice(0, 3)
+                  .padEnd(3, "0")}`
+            );
+            polygon_vertices.push([
+                dms_to_dd(N, lad.slice(0, -1), lam.slice(0, -1),las.slice(0, -1)),
+                dms_to_dd(N, lod.slice(0, -1), lom.slice(0, -1), los.slice(0, -1))
+            ]);
+          }
+
+          csv_out = parsed_array.join("\n");
+          vertices_out.value = csv_out;
+          download_button.disabled = false;
+
+          if (polygon !== null) {
+              map.removeLayer(polygon);
+          }
+          polygon = L.polygon(polygon_vertices).addTo(map);
+          map.fitBounds(L.latLngBounds(polygon_vertices));
+      }
+
+      function downloadProcessed() {
+        download(vertices_fname.split(".")[0] + ".txt", csv_out);
+      }
+      function download(filename, text) {
+        var element = document.createElement("a");
+        element.setAttribute(
+          "href",
+          "data:text/plain;charset=utf-8," + encodeURIComponent(text)
+        );
+        element.setAttribute("download", filename);
+
+        element.style.display = "none";
+        document.body.appendChild(element);
+
+        element.click();
+
+        document.body.removeChild(element);
+      }
+
+      function dms_to_dd(NE, d, m, s) {
+          let dd = parseFloat(d) + parseFloat(m)/60.0 + parseFloat(s)/3600.0;
+          if (NE == "N" || NE == "E") {
+              return dd;
+          } else {
+              return -dd;
+          }
+      }
+    </script>
+  </body>
+</html>
