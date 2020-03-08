@@ -138,10 +138,7 @@
 
     if (window.location.hash) {
         const status = document.querySelector("#share-status");
-        const shareLink = document.querySelector("#share-link");
         document.getElementById("get-share").disabled = true;
-        shareLink.href = "";
-        shareLink.textContent = "";
 
         let send_id = window.location.hash.substring(1);
         peer = new Peer({secure: true, debug: 3});
