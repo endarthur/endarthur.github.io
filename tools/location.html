@@ -11,6 +11,7 @@
         margin: auto;
       }
     </style>
+    <script src="https://unpkg.com/peerjs@1.0.0/dist/peerjs.min.js"></script>
   </head>
 
   <body>
@@ -22,10 +23,14 @@
       </nav>
       <span id="page-created">created: <em>2020-03-08</em></span>
       <span id="page-modified">modified: <em>2020-03-08</em></span>
-      <br />
+      <h2>Location Test</h2>
         <button id="find-me">Show my location</button><br />
-        <p id = "status"></p>
-        <a id = "map-link" target="_blank"></a>
+        <p id = "location-status"></p>
+        <a id = "map-link" target="_blank"></a><br>
+      <h2>Share using peerjs</h2>
+      <button id="get-share">Create share link</button><br />
+        <p id = "share-status"></p>
+        <a id = "share-link" target="_blank"></a><br>
       <hr />
       <!-- <sup id="fn1">
             <p>1. Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
@@ -52,8 +57,9 @@
     </div>
   </body>
   <script>
+    // https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API
     function geoFindMe() {
-      const status = document.querySelector("#status");
+      const status = document.querySelector("#location-status");
       const mapLink = document.querySelector("#map-link");
 
       mapLink.href = "";
@@ -80,6 +86,70 @@
       }
     }
 
-    document.querySelector("#find-me").addEventListener("click", geoFindMe);
+    let peer;
+    function getShareLink() {
+        const status = document.querySelector("#share-status");
+        const shareLink = document.querySelector("#share-link");
+
+        shareLink.href = "";
+        shareLink.textContent = "";
+
+        peer = new Peer({secure: true, debug: 3});
+        status.textContent = 'Connecting to peerjs...';
+        peer.on('open', function(id){
+            console.log('My peer ID is: ' + id);
+            status.textContent = 'Awaiting connection...';
+            shareLink.href = `${window.location.href + "#" + id}`;
+            shareLink.textContent = `${window.location.href + "#" + id}`;
+        });
+
+        peer.on('error', function(err) {
+            status.textContent = `error: ${err}`;
+        });
+
+        peer.on('connection', function(conn) {
+            status.textContent = `Connected to ${conn.peer}`;
+            navigator.geolocation.watchPosition(
+                function(pos) {
+                    conn.send(pos);
+                },
+                function(err) {
+                    status.textContent = 'ERROR(' + err.code + '): ' + err.message;
+                }
+                {
+                    enableHighAccuracy: true
+                }
+            );
+        });
+    }
+
+    if (window.location.hash) {
+        const status = document.querySelector("#share-status");
+        const shareLink = document.querySelector("#share-link");
+        document.getElementById("get-share").disabled = true;
+        shareLink.href = "";
+        shareLink.textContent = "";
+
+        let send_id = window.location.hash.substring(1);
+        peer = new Peer({secure: true, debug: 3});
+
+        status.textContent = 'Connecting to peerjs...';
+
+        peer.on('open', function(id){
+            console.log('My peer ID is: ' + id);
+            status.textContent = 'Connecting...';
+            let conn = peer.connect(send_id);
+            conn.on('data', function(data) {
+                console.log(data);
+            });
+        });
+
+        peer.on('error', function(err) {
+            status.textContent = `error: ${err}`;
+        });
+    }
+
+    document.getElementById("find-me").addEventListener("click", geoFindMe);
+    document.getElementById("get-share").addEventListener("click", getShareLink);
   </script>
 </html>
