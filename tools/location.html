@@ -111,11 +111,22 @@
             status.textContent = `Connected to ${conn.peer}`;
             navigator.geolocation.watchPosition(
                 function(pos) {
-                    conn.send(pos);
+                    conn.send(
+                        {
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                            altitude: pos.coords.altitude,
+                            accuracy: pos.coords.accuracy,
+                            altitudeAccuracy: pos.coords.altitudeAccuracy,
+                            heading: pos.coords.heading,
+                            speed: pos.coords.speed,
+                            timestamp: pos.timestamp
+                        }
+                    );
                 },
                 function(err) {
                     status.textContent = 'ERROR(' + err.code + '): ' + err.message;
-                }
+                },
                 {
                     enableHighAccuracy: true
                 }
@@ -140,6 +151,7 @@
             status.textContent = 'Connecting...';
             let conn = peer.connect(send_id);
             conn.on('data', function(data) {
+                status.textContent = `lat: ${data.latitude} lon: ${data.longitude}`;
                 console.log(data);
             });
         });
