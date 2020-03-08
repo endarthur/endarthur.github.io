@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Location Sharing</title>
+    <style>
+      .content {
+        max-width: 960px;
+        margin: auto;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="content">
+      <h1>Simple Location Sharing</h1>
+      <nav>
+        <a href="../index.html">Home</a>
+        <a href="../site.html">Site</a>
+      </nav>
+      <span id="page-created">created: <em>2020-03-08</em></span>
+      <span id="page-modified">modified: <em>2020-03-08</em></span>
+      <br />
+        <button id="find-me">Show my location</button><br />
+        <p id = "status"></p>
+        <a id = "map-link" target="_blank"></a>
+      <hr />
+      <!-- <sup id="fn1">
+            <p>1. Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
+                for the segment instead of spherical arc, as the numerical precision might blow up and give you bad results.
+            </p>
+            <p>
+                On the subject of angles, you can either use the arccosine of the dot product or the arctangent of the magnitude of
+                the cross product over the dot product. The second method is much more precise for small angles and will allow you to
+                use a closer tolerance before considering that the angle between two survey points is zero. It's costlier in terms
+                of processing, though.
+                <a href="#ref1" title="Jump back to footnote 1 in the text.">&#8617;</a>
+            </p></sup> -->
+      <!-- <h2>References</h2>
+        <ul>
+            <li>
+                <a href="https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">The dark art of drillhole desurveying, from the leapfrog3d blog</a>
+                (<a href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">internet archive</a>)
+            </li>
+            <li><a href="http://home.btconnect.com/SiliconDale/silicon13.htm">Drillhole De-Surveying, from Steve Henley's blog</a>
+                (<a href="https://web.archive.org/web/20190628214612/http://home.btconnect.com/SiliconDale/silicon13.htm">internet archive</a>)
+            </li>
+        </ul>
+    <h2> <a href="https://github.com/endarthur/endarthur.github.io/issues/2">Comments</a></h3> -->
+    </div>
+  </body>
+  <script>
+    function geoFindMe() {
+      const status = document.querySelector("#status");
+      const mapLink = document.querySelector("#map-link");
+
+      mapLink.href = "";
+      mapLink.textContent = "";
+
+      function success(position) {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        status.textContent = "";
+        mapLink.href = `https://www.openstreetmap.org/#map=18/${latitude}/${longitude}`;
+        mapLink.textContent = `Latitude: ${latitude} °, Longitude: ${longitude} °`;
+      }
+
+      function error() {
+        status.textContent = "Unable to retrieve your location";
+      }
+
+      if (!navigator.geolocation) {
+        status.textContent = "Geolocation is not supported by your browser";
+      } else {
+        status.textContent = "Locating…";
+        navigator.geolocation.getCurrentPosition(success, error);
+      }
+    }
+
+    document.querySelector("#find-me").addEventListener("click", geoFindMe);
+  </script>
+</html>

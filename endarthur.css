@@ -12,7 +12,7 @@ body {
     grid-template-areas: 
     "stereo intro intro"
     "stereo repos academic"
-    "stereo writting .";
+    "stereo writting tools";
 }
 
 #intro-text {
@@ -29,6 +29,10 @@ body {
 
 #writting {
     grid-area: writting;
+}
+
+#tools {
+    grid-area: tools;
 }
 
 ul.base-list {
@@ -135,11 +139,12 @@ svg > g.stereo-element {
 @media (orientation: portrait) {
     .container {
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr auto auto auto;
+        grid-template-rows: 1fr auto auto auto auto;
         grid-template-areas: 
         "stereo stereo"
         "intro intro"
         "repos academic"
-        "writting writting";
+        "writting writting"
+        "tools tools";
     }
 }

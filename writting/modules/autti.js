@@ -47,7 +47,7 @@ class Vector {
         return this.x[0] * other.x[0] + this.x[1] * other.x[1] + this.x[2] * other.x[2];
     }
     angle_with(other) {
-        return Math.acos(this.dot(other) / (this.length * other.norm));
+        return Math.acos(this.dot(other) / (this.length * other.length));
     }
     cross_with(other) {
         var tx = this.x[0];
@@ -253,7 +253,7 @@ function dcosPlane(attitude, invert_positive) {
         dcos[1] = -dcos[1];
         dcos[2] = -dcos[2];
     }
-    return new Vector(dcos);
+    return new Plane(dcos);
 }
 
 //https://math.stackexchange.com/a/1637853/119393
@@ -304,7 +304,7 @@ function dcosLine(attitude, invert_positive) {
         dcos[1] = -dcos[1];
         dcos[2] = -dcos[2];
     }
-    return new Vector(dcos);
+    return new Line(dcos);
 }
 
 function sphereLine(line) {
