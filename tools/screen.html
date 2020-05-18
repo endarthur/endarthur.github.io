@@ -261,8 +261,8 @@
         console.log("My peer ID is: " + id);
         status.textContent = "Connecting...";
         // await startCapture();
-        stream = createMediaStreamFake();
-        let conn = peer.call(send_id, stream);
+        let dummy = createMediaStreamFake();
+        let conn = peer.call(send_id, dummy);
         conn.on("stream", function (data) {
           videoElem.srcObject = stream = data;
           status.textContent = `Connected to ${send_id}`;

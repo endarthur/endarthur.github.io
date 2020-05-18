@@ -1,2 +1,5 @@
 # Jeckyll
 _site/
+
+# python
+.mypy_cache
