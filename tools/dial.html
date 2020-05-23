@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Screen Sharing</title>
+    <style>
+      .content {
+        max-width: 960px;
+        margin: auto;
+      }
+      #video {
+        border: 1px solid #999;
+        width: 98%;
+        max-width: 860px;
+      }
+
+      .error {
+        color: red;
+      }
+
+      .warn {
+        color: orange;
+      }
+
+      .info {
+        color: darkgreen;
+      }
+    </style>
+    <script src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
+    <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+    integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+   integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+   crossorigin=""></script> -->
+  </head>
+
+  <body>
+    <div class="content">
+      <h1>Simple Call</h1>
+      <nav>
+        <a href="../index.html">Home</a>
+        <a href="../site.html">Site</a>
+      </nav>
+      <span id="page-created">created: <em>2020-05-22</em></span>
+      <span id="page-modified">modified: <em>2020-05-22</em></span>
+      <h2>Screen</h2>
+      <p>
+        A really basic audio call using
+        <a href="https://peerjs.com/">peerjs</a>
+        <sup
+          >(<a
+            href="https://web.archive.org/web/20200518012436/https://peerjs.com/"
+            >ia</a
+          >)</sup
+        >
+        . Could support video, though audio is probably fine for just a test. Caveat emptor.
+      </p>
+      <audio id="audio" autoplay></audio>
+      <br />
+      <strong>Log:</strong>
+      <br />
+      <pre id="log"></pre>
+      <h2>Call link</h2>
+      <button id="get-share">Create link</button><br />
+      <p id="share-status"></p>
+      <br />
+      <a id="share-link" target="_blank"></a>
+
+      <hr />
+      <!-- <sup id="fn1">
+            <p>1. Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
+                for the segment instead of spherical arc, as the numerical precision might blow up and give you bad results.
+            </p>
+            <p>
+                On the subject of angles, you can either use the arccosine of the dot product or the arctangent of the magnitude of
+                the cross product over the dot product. The second method is much more precise for small angles and will allow you to
+                use a closer tolerance before considering that the angle between two survey points is zero. It's costlier in terms
+                of processing, though.
+                <a href="#ref1" title="Jump back to footnote 1 in the text.">&#8617;</a>
+            </p></sup> -->
+      <!-- <h2>References</h2>
+        <ul>
+            <li>
+                <a href="https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">The dark art of drillhole desurveying, from the leapfrog3d blog</a>
+                (<a href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">internet archive</a>)
+            </li>
+            <li><a href="http://home.btconnect.com/SiliconDale/silicon13.htm">Drillhole De-Surveying, from Steve Henley's blog</a>
+                (<a href="https://web.archive.org/web/20190628214612/http://home.btconnect.com/SiliconDale/silicon13.htm">internet archive</a>)
+            </li>
+        </ul>
+    <h2> <a href="https://github.com/endarthur/endarthur.github.io/issues/2">Comments</a></h3> -->
+    </div>
+  </body>
+  <script>
+    // https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API
+    const audioElem = document.getElementById("audio");
+    const logElem = document.getElementById("log");
+    const startElem = document.getElementById("start");
+    const stopElem = document.getElementById("stop");
+
+    let stream = null;
+
+    // Options for getDisplayMedia()
+
+    var displayMediaOptions = {
+      audio: true,
+    };
+
+    // Set event listeners for the start and stop buttons
+    // startElem.addEventListener(
+    //   "click",
+    //   function (evt) {
+    //     startCapture();
+    //   },
+    //   false
+    // );
+
+    // stopElem.addEventListener(
+    //   "click",
+    //   function (evt) {
+    //     stopCapture();
+    //   },
+    //   false
+    // );
+
+    async function startCapture() {
+      logElem.innerHTML = "";
+
+      try {
+        audioElem.srcObject = stream = await navigator.mediaDevices.getUserMedia(
+          displayMediaOptions
+        );
+        // dumpOptionsInfo();
+      } catch (err) {
+        console.error("Error: " + err);
+      }
+    }
+
+    // function stopCapture(evt) {
+    //   let tracks = audioElem.srcObject.getTracks();
+
+    //   tracks.forEach((track) => track.stop());
+    //   audioElem.srcObject = null;
+    // }
+
+    // function dumpOptionsInfo() {
+    //   const videoTrack = audioElem.srcObject.getVideoTracks()[0];
+
+    //   console.info("Track settings:");
+    //   console.info(JSON.stringify(videoTrack.getSettings(), null, 2));
+    //   console.info("Track constraints:");
+    //   console.info(JSON.stringify(videoTrack.getConstraints(), null, 2));
+    // }
+
+    // function geoFindMe() {
+    //   const status = document.querySelector("#location-status");
+    //   const mapLink = document.querySelector("#map-link");
+
+    //   mapLink.href = "";
+    //   mapLink.textContent = "";
+
+    //   function success(position) {
+    //     const latitude = position.coords.latitude;
+    //     const longitude = position.coords.longitude;
+
+    //     status.textContent = "";
+    //     mapLink.href = `https://www.openstreetmap.org/#map=18/${latitude}/${longitude}`;
+    //     mapLink.textContent = `Latitude: ${latitude} °, Longitude: ${longitude} °`;
+    //     setMarker(position.coords);
+    //     dataHook({
+    //                         latitude: position.coords.latitude,
+    //                         longitude: position.coords.longitude,
+    //                     });
+    //   }
+
+    //   function error() {
+    //     status.textContent = "Unable to retrieve your location";
+    //   }
+
+    //   if (!navigator.geolocation) {
+    //     status.textContent = "Geolocation is not supported by your browser";
+    //   } else {
+    //     status.textContent = "Locating…";
+    //     navigator.geolocation.getCurrentPosition(success, error);
+    //   }
+    // }
+
+    let peer;
+    async function getShareLink() {
+      const status = document.querySelector("#share-status");
+      document.getElementById("get-share").disabled = true;
+
+      const shareLink = document.querySelector("#share-link");
+      if (stream === null) {
+        await startCapture();
+      }
+
+      peer = new Peer({ secure: true, debug: 3 });
+      status.textContent = "Connecting to peerjs...";
+      peer.on("open", function (id) {
+        console.log("My peer ID is: " + id);
+        status.textContent = "Awaiting connection...";
+        shareLink.textContent = shareLink.href = `${
+          window.location.href + "#" + id
+        }`;
+      });
+
+      peer.on("error", function (err) {
+        status.textContent = `error: ${err}`;
+      });
+
+      peer.on(
+        "call",
+        async function (conn) {
+          status.textContent = `Connected to ${conn.peer}`;
+          conn.answer(stream);
+
+          conn.on("stream", function (remoteStream) {
+            audioElem.srcObject = remoteStream;
+            // Show stream in some video/canvas element.
+          });
+        },
+        function (err) {
+          console.log("Failed to get local stream", err);
+        }
+      );
+    }
+
+    if (window.location.hash) {
+      const status = document.querySelector("#share-status");
+
+      let send_id = window.location.hash.substring(1);
+      peer = new Peer({ secure: true, debug: 3 });
+
+      status.textContent = "Connecting to peerjs...";
+
+      peer.on("open", async function (id) {
+        console.log("My peer ID is: " + id);
+        status.textContent = "Connecting...";
+        await startCapture();
+        let conn = peer.call(send_id, stream);
+        conn.on("stream", function (data) {
+          audioElem.srcObject = data;
+          status.textContent = `Connected to ${send_id}`;
+        });
+      });
+
+      peer.on("error", function (err) {
+        status.textContent = `error: ${err}`;
+      });
+    }
+
+
+    document
+      .getElementById("get-share")
+      .addEventListener("click", getShareLink);
+
+
+    // var map = L.map("mapid").setView([-21.1909, -44.3282], 13);
+    // L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    // attribution:
+    //     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    // }).addTo(map);
+    // let marker;
+
+    // function setMarker(data) {
+    //     if (marker) {
+    //         marker.setLatLng([data.latitude, data.longitude]);
+    //         marker.setRadius(data.accuracy);
+    //     } else {
+    //         marker = L.circle([data.latitude, data.longitude], {radius: data.accuracy}).addTo(map);
+    //     }
+    //     map.setView(marker.getLatLng());
+    // }
+
+    // function dataHook(data) {
+    //     fetch("http://localhost:8008/location_hook", {
+    //         method: 'POST',
+    //         mode: 'no-cors',
+    //         cache: 'no-cache',
+    //         headers: {
+    //             'Content-Type': 'text/plain'
+    //         },
+    //         body: JSON.stringify(data)
+    //     });
+    // }
+
+    // document.getElementById("find-me").addEventListener("click", geoFindMe);
+  </script>
+</html>
