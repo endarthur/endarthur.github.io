@@ -58,7 +58,7 @@
         >
         . Could support video, though audio is probably fine for just a test. Caveat emptor.
       </p>
-      <audio id="audio" autoplay></audio>
+      <audio id="audio" autoplay controls></audio>
       <br />
       <strong>Log:</strong>
       <br />
@@ -130,7 +130,8 @@
       logElem.innerHTML = "";
 
       try {
-        audioElem.srcObject = stream = await navigator.mediaDevices.getUserMedia(
+        // audioElem.srcObject = 
+        stream = await navigator.mediaDevices.getUserMedia(
           displayMediaOptions
         );
         // dumpOptionsInfo();
