@@ -19,7 +19,12 @@
         trickle: false
       })
 
-      p.on('error', err => console.log('error', err))
+      p.on('error', err => {
+        console.log('error', err);
+        if (location.hash !== '#1') {
+          p.signal(JSON.parse(document.querySelector('#incoming').value));
+        }
+      })
 
       p.on('signal', data => {
         console.log('SIGNAL', JSON.stringify(data))
