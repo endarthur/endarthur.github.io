@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Serverless Com</title>
+    <style>
+      .content {
+        max-width: 960px;
+        margin: auto;
+      }
+      #video {
+        border: 1px solid #999;
+        width: 98%;
+        max-width: 860px;
+      }
+
+      .error {
+        color: red;
+      }
+
+      .warn {
+        color: orange;
+      }
+
+      .info {
+        color: darkgreen;
+      }
+    </style>
+    <script src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
+    <script src="../js/simplepeer.min.js"></script>
+    <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+    integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+   integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+   crossorigin=""></script> -->
+  </head>
+
+  <body>
+    <div class="content">
+      <h1>Serverless Com</h1>
+      <nav>
+        <a href="../index.html">Home</a>
+        <a href="../site.html">Site</a>
+      </nav>
+      <span id="page-created">created: <em>2020-05-24</em></span>
+      <span id="page-modified">modified: <em>2020-05-24</em></span>
+      <details>
+          <summary>
+            <strong>Screen</strong>
+          </summary>
+        <video id="video" autoplay controls></video>
+        <button id="start">Start Capture</button>&nbsp;<button id="stop">
+          Stop Capture
+        </button>
+      </details>
+
+      <br />
+      <audio id="audio" autoplay controls></audio>
+      <br />
+      <button id="start-call" disabled>Call</button><br />
+      <!-- <strong>Log:</strong>
+      <br />
+      <pre id="log"></pre> -->
+      <h2>Link</h2>
+      <button id="get-share">Create link</button><br />
+      <p id="share-status"></p>
+      <br />
+      <a id="share-link" target="_blank"></a>
+      <hr />
+      <!-- <sup id="fn1">
+            <p>1. Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
+                for the segment instead of spherical arc, as the numerical precision might blow up and give you bad results.
+            </p>
+            <p>
+                On the subject of angles, you can either use the arccosine of the dot product or the arctangent of the magnitude of
+                the cross product over the dot product. The second method is much more precise for small angles and will allow you to
+                use a closer tolerance before considering that the angle between two survey points is zero. It's costlier in terms
+                of processing, though.
+                <a href="#ref1" title="Jump back to footnote 1 in the text.">&#8617;</a>
+            </p></sup> -->
+      <!-- <h2>References</h2>
+        <ul>
+            <li>
+                <a href="https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">The dark art of drillhole desurveying, from the leapfrog3d blog</a>
+                (<a href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">internet archive</a>)
+            </li>
+            <li><a href="http://home.btconnect.com/SiliconDale/silicon13.htm">Drillhole De-Surveying, from Steve Henley's blog</a>
+                (<a href="https://web.archive.org/web/20190628214612/http://home.btconnect.com/SiliconDale/silicon13.htm">internet archive</a>)
+            </li>
+        </ul>
+    <h2> <a href="https://github.com/endarthur/endarthur.github.io/issues/2">Comments</a></h3> -->
+    </div>
+  </body>
+  <script>
+    // https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API
+    const audioElem = document.getElementById("audio");
+    const videoElem = document.getElementById("video");
+    const logElem = document.getElementById("log");
+    const startElem = document.getElementById("start");
+    const stopElem = document.getElementById("stop");
+
+    const shareLink = document.getElementById("share-link");
+    const startCallElem = document.getElementById("start-call");
+
+    const status = document.querySelector("#share-status");
+
+    let audio_stream = null;
+    let connected = false;
+
+    // Options for getDisplayMedia()
+
+    var audioCallOptions = {
+      audio: true,
+    };
+
+    // Set event listeners for the start and stop buttons
+    startElem.addEventListener(
+      "click",
+      function (evt) {
+        startCapture();
+      },
+      false
+    );
+
+    stopElem.addEventListener(
+      "click",
+      function (evt) {
+        stopCapture();
+      },
+      false
+    );
+
+    let peer;
+    let bc;
+
+    function getLink() {
+      peer = new SimplePeer({
+        initiator: true,
+        trickle: false
+      });
+      status.textContent = "Gathering ICE...";
+      peer.on("signal", data => {
+        if (!connected) {
+          status.textContent = "Awaiting connection...";
+          shareLink.textContent = shareLink.href = `${
+            window.location.href + "#" + encodeURIComponent(JSON.stringify(data))
+          }`;
+          bc = new BroadcastChannel("comSignal");
+          bc.onmessage = signal => {
+            peer.signal(signal.data);
+            bc.close();
+          };
+        } else {
+          peer.send(JSON.stringify(
+            {
+              type: "signal",
+              data: data
+            }
+          ));
+        }
+      });
+
+      peerSetup();
+    }
+
+    if (window.location.hash) {
+      const encodedData = window.location.hash.substring(1);
+      const decodedData = decodeURIComponent(encodedData);
+      const parsedData = JSON.parse(decodedData);
+      peer = new SimplePeer({
+        initiator: false,
+        trickle: false
+      });
+
+      peer.signal(parsedData);
+      status.textContent = "Gathering response ICE...";
+
+      peer.on("signal", data => {
+        if (!connected) {
+          shareLink.textContent = shareLink.href = `${
+          new URL("/tools/store.html", document.baseURI).href
+          + "#" + encodeURIComponent(JSON.stringify({
+            target: "broadcast",
+            channel: "comSignal",
+            data: data,
+            close: true
+          }))
+        }`;
+        status.textContent = "Awaiting connection...";
+        } else {
+          peer.send(JSON.stringify(
+            {
+              type: "signal",
+              data: data
+            }
+          ));
+        }
+      });
+
+      peerSetup();
+    }
+
+    function peerSetup(){
+      peer.on("error", function (err) {
+        status.textContent = `error: ${err}`;
+      });
+      peer.on('connect', () => {
+        status.textContent = "Connected.";
+        shareLink.textContent = shareLink.href = "";
+        connected = true;
+        startCallElem.disabled = false;
+        // p.send('whatever' + Math.random());
+      });
+      peer.on("stream", stream => {
+        if (stream.getVideoTracks().length > 0) {
+          videoElem.srcObject = stream;
+          videoElem.play();
+        } else {
+          audioElem.srcObject = stream;
+          audioElem.play();
+          if (audio_stream === null) {
+            startCall();
+          }
+        }
+      });
+      peer.on("data", data => {
+        let parsedData = JSON.parse(data);
+        if (parsedData.type === "signal") {
+          peer.signal(parsedData.data);
+        } else {
+          console.log(parsedData);
+        }
+      });
+    }
+
+    async function startAudio() {
+      try {
+        // audioElem.srcObject = 
+        audio_stream = await navigator.mediaDevices.getUserMedia(
+          audioCallOptions
+        );
+        return audio_stream;
+        // dumpOptionsInfo();
+      } catch (err) {
+        console.error("Error: " + err);
+      }
+    }
+
+    async function startCall() {
+      if (audio_stream === null) {
+        audio_stream = await startAudio();
+      }
+      peer.addStream(audio_stream);
+    }
+
+    document
+      .getElementById("get-share")
+      .addEventListener("click", getLink);
+    
+    startCallElem.addEventListener("click", startCall);
+  </script>
+</html>

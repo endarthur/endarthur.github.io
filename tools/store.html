@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Local Store</title>
+</head>
+<body>
+    <h1>Simple Data Input</h1>
+    <p>
+        Parses data in the url fragment and either stores it in localStorage or sessionStorage or broadcasts to given channel. See source.
+    </p>
+    <script>
+    if (window.location.hash) {
+        const encodedData = window.location.hash.substring(1);
+        // https://stackoverflow.com/a/44179610/1457481
+        const decodedData = decodeURIComponent(encodedData);
+        const parsedData = JSON.parse(decodedData);
+        switch (parsedData.target) {
+            case "local":
+                window.localStorage[parsedData.key] = parsedData.data;
+                break;
+            case "session":
+                window.sessionStorage[parsedData.key] = parsedData.data;
+                break;
+            case "broadcast":
+                // https://stackoverflow.com/a/43830980/1457481
+                const bc = new BroadcastChannel(parsedData.channel);
+                bc.postMessage(parsedData.data);
+            default:
+                break;
+        }
+        if (parsedData.close) {
+            window.close();
+        }
+    }
+    </script>
+</body>
+</html>
