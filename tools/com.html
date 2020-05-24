@@ -47,12 +47,12 @@
       </nav>
       <span id="page-created">created: <em>2020-05-24</em></span>
       <span id="page-modified">modified: <em>2020-05-24</em></span>
-      <details>
+      <details id="video-tab">
           <summary>
             <strong>Screen</strong>
           </summary>
         <video id="video" autoplay controls></video>
-        <button id="start">Start Capture</button>&nbsp;<button id="stop">
+        <button id="start-video" disabled>Start Capture</button>&nbsp;<button id="stop-video" disabled>
           Stop Capture
         </button>
       </details>
@@ -99,39 +99,19 @@
     const audioElem = document.getElementById("audio");
     const videoElem = document.getElementById("video");
     const logElem = document.getElementById("log");
-    const startElem = document.getElementById("start");
-    const stopElem = document.getElementById("stop");
+    const startElem = document.getElementById("start-video");
+    const stopElem = document.getElementById("stop-video");
 
     const shareLink = document.getElementById("share-link");
     const startCallElem = document.getElementById("start-call");
 
     const status = document.querySelector("#share-status");
 
+    const videoTab = document.getElementById("video-tab");
+
     let audio_stream = null;
+    let video_stream = null;
     let connected = false;
-
-    // Options for getDisplayMedia()
-
-    var audioCallOptions = {
-      audio: true,
-    };
-
-    // Set event listeners for the start and stop buttons
-    startElem.addEventListener(
-      "click",
-      function (evt) {
-        startCapture();
-      },
-      false
-    );
-
-    stopElem.addEventListener(
-      "click",
-      function (evt) {
-        stopCapture();
-      },
-      false
-    );
 
     let peer;
     let bc;
@@ -167,6 +147,7 @@
     }
 
     if (window.location.hash) {
+      shareLink.disabled = true;
       const encodedData = window.location.hash.substring(1);
       const decodedData = decodeURIComponent(encodedData);
       const parsedData = JSON.parse(decodedData);
@@ -212,12 +193,15 @@
         shareLink.textContent = shareLink.href = "";
         connected = true;
         startCallElem.disabled = false;
+        startElem.disabled = false;
+        stopElem.disabled = false;
         // p.send('whatever' + Math.random());
       });
       peer.on("stream", stream => {
         if (stream.getVideoTracks().length > 0) {
           videoElem.srcObject = stream;
           videoElem.play();
+          videoTab.open = true;
         } else {
           audioElem.srcObject = stream;
           audioElem.play();
@@ -249,6 +233,42 @@
       }
     }
 
+    var displayMediaOptions = {
+      video: {
+        cursor: "always",
+      },
+      audio: false,
+    };
+
+    var audioCallOptions = {
+      audio: true,
+    };
+
+    async function startVideo() {
+      try {
+        videoElem.srcObject = stream = await navigator.mediaDevices.getDisplayMedia(
+          displayMediaOptions
+        );
+        return stream;
+      } catch (err) {
+        console.error("Error: " + err);
+      }
+    }
+
+    function stopVideo(evt) {
+      let tracks = videoElem.srcObject.getTracks();
+
+      tracks.forEach((track) => track.stop());
+      videoElem.srcObject = null;
+    }
+
+    async function startVideoStream() {
+      if (video_stream === null) {
+        video_stream = await startVideo();
+      }
+      peer.addStream(video_stream);
+    }
+
     async function startCall() {
       if (audio_stream === null) {
         audio_stream = await startAudio();
@@ -256,10 +276,25 @@
       peer.addStream(audio_stream);
     }
 
-    document
-      .getElementById("get-share")
-      .addEventListener("click", getLink);
-    
+
+    // Set event listeners for the start and stop buttons
+    startElem.addEventListener(
+      "click",
+      function (evt) {
+        startVideoStream();
+      },
+      false
+    );
+
+    stopElem.addEventListener(
+      "click",
+      function (evt) {
+        stopVideo();
+      },
+      false
+    );
+
+    document.getElementById("get-share").addEventListener("click", getLink);
     startCallElem.addEventListener("click", startCall);
   </script>
 </html>
