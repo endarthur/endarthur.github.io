@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>TRANSFORM 2020 Lightning Talk -- Digikom</title>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML' async></script>
+    <style>
+        .content {
+            max-width: 960px;
+            margin: auto;
+        }
+
+        #stereoDiagram {
+            stroke: #555f61;
+            stroke-width: 0.5;
+        }
+        .stereo-primitive {
+            fill: none;
+            stroke: #555f61;
+            stroke-width: 1.0;
+        }
+        .stereo-point {
+            r: 8;
+            fill: #000000ff;
+        }
+        .stereo-line {
+            fill:none;
+            stroke:black;
+            stroke-width:2;
+        }
+        figure {
+            text-align: center;
+        }
+    </style>
+    <script src="../js/autti.js"></script>
+    <script src="../js/auttiplot.js"></script>
+</head>
+
+<body>
+    <div class="content">
+        <h1><a href="https://transform2020.sched.com/">TRANSFORM 2020</a> Lightning Talk -- Digikom</h1>
+        <nav>
+            <a href="../index.html">Home</a>
+            <a href="../site.html">Site</a>
+        </nav>
+        <span id="page-created">created: <em>2020-06-11</em></span>
+        <span id="page-modified">modified: <em>2020-06-11</em></span>
+        <h2>Abstract</h2>
+        <p>
+            Digikom is a browser based geological compass most probably useful as a teaching aid. It was built
+            using <a href="https://github.com/dorukeker/gyronorm.js/issues/61">gyronorm</a>, <a href="https://peerjs.com/">peerjs</a>
+            and a partial js port of <a href="https://github.com/endarthur/autti">auttitude</a>.
+        </p>
+        <h2>Introduction</h2>
+        <p>
+            I started learning a bit of javascript when I started this github personal page, as a way to add some
+            <a href="/index.html">interactivity</a>.
+        </p>
+        <figure>
+            <svg width="300" height="300" id="stereo1">
+            </svg><br>
+            <input type="number" min="0" max="360" value="120" oninput="movePoint(this, 0)"/>
+            <input type="number" min="0" max="90" value="30" oninput="movePoint(this, 1)"/>
+            <figcaption>
+                Figure 1 - Basic interaction.
+            </figcaption>
+        </figure>
+
+        <script>
+            var at = Auttitude;
+            var plt = new auttiplot.EqualArea("stereo1", true);
+            var point_attitude = [120, 30];
+            var a = at.dcosPlane(point_attitude);
+            var point_marker = plt.as_point(a);
+            var gc_line = plt.as_line(a.great_circle());
+            var movePoint = function(slider, index){
+                point_attitude[index] = slider.value;
+                var p = at.dcosPlane(point_attitude);
+                plt.svg.removeChild(point_marker);
+                plt.svg.removeChild(gc_line);
+                point_marker = plt.as_point(p);
+                gc_line = plt.as_line(p.great_circle());
+            }
+        </script>
+        <p>
+            I did a partial port to javascript of <a href="https://github.com/endarthur/autti">auttitude</a>,
+            which is a structural geology data analysis and plotting library I have been working on since
+            undergrad that is currently being used as the engine for
+            <a href="https://openstereo.readthedocs.io/en/latest/">openstereo</a>.
+        </p>
+        <p>
+            On a side note, having some way to easily work with structural data in javascript allows for some
+            fun, as in creating an alexa skill for voice activated "stereonets" and adding a custom plot for
+            <a href="https://datastudio.google.com/u/0/">google data studio</a>.
+        </p>
+        <figure>
+            <img
+              src="../img/data_studio_stereo.png"
+              alt="Tocher dataset plotted on google data studio"
+            />
+            <figcaption>
+              Figure 2 - mostly "because why not?".
+            </figcaption>
+        </figure>
+        <p>
+            As different phone OSs at the time presented orientation data differently, I used 
+            <a href="https://github.com/dorukeker/gyronorm.js/issues/61">gyronorm</a> as a way to normalize
+            the input.
+        </p>
+        <p>
+            While at first I only plotted the stereonet in response to changes in phone orientation,
+            I eventually got the idea of trying to connect it to a desktop computer somehow.
+        </p>
+        <h2>Enter WebRTC</h2>
+        <p>
+            I originally wanted to offer a connection from the cellphone directly to
+            openstereo, but my first attempt
+            (making the phone POST the data to a server running on the desktop computer) ended up being
+            sluggish and unreliable on some networks.
+        </p>
+        <p>
+            I eventually found out about the WebRTC api, which allows for direct peer to peer communication between users.
+            Giving up at first on integrating this to openstereo (I couldn't find any library nor understand how at the time
+            to do WebRTC in python/PyQT5), I decided to use the browser as the visualization platform as well.
+        </p>
+        <figure>
+            <img
+              src="../img/chrome_GEVkvGUoBB.png"
+              alt="Digikom main page on a desktop"
+            />
+            <figcaption>
+              Figure 3 - Digikom already connected to a phone.
+            </figcaption>
+        </figure>
+        <p>
+            One of the complicated issues in using WebRTC is signalling, that is, exchanging information between the two
+            browsers on how to connect. At the time, as I wanted to build only a simple static page, I used
+            <a href="https://peerjs.com/">peerjs</a>, which is a nice and really simple to use library for this kind
+            of communication in the browser, supporting everything that WebRTC has, such as data, audio and video
+            streams (which, combined with some other really cool modern browser APIs, allows you to easily do stuff as
+            <a href="../tools/screen.html">sharing your desktop</a>).
+        </p>
+        <p>
+            They offer their own free signalling server, so you really only have import the library and it works.
+        </p>
+        <p>
+            When it works. As a free of charge service offered to the community, it can be hard to connect and get a peer id
+            sometimes. As an alternative, you could use a simpler library, as <a href="https://github.com/feross/simple-peer">simple-peer</a>
+            and build your own signalling server. That consists of exchanging the signal data between the peers and
+            then all subsequent communication is directly between the users.
+        </p>
+        <p>
+            I will eventually add a link here to a version doing this running on <a href="https://glitch.com/">glitch</a>.
+        </p>
+        <h2>Javascript can be really fun!</h2>
+        <p>
+            In conclusion, I have to say that my adventures in learning javascript have been really interesting. Browsers
+            have some really cool APIs nowadays, and with some libraries as presented above, or maybe ones that use
+            WebGL, such as <a href="https://threejs.org/">three.js</a> or on another layer of abstraction, webVR as
+            <a href="https://aframe.io/">a-frame</a>, you can quickly prototype and build <a href="./aframe_path.html">fun projects</a>!
+        </p>
+        <h2>Thanks everyone and sorry again for the terrible audio!</h2>
+        <hr>
+        <!-- <sup id="fn1">
+            <p>1. Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
+                for the segment instead of spherical arc, as the numerical precision might blow up and give you bad results.
+            </p>
+            <p>
+                On the subject of angles, you can either use the arccosine of the dot product or the arctangent of the magnitude of
+                the cross product over the dot product. The second method is much more precise for small angles and will allow you to
+                use a closer tolerance before considering that the angle between two survey points is zero. It's costlier in terms
+                of processing, though.
+                <a href="#ref1" title="Jump back to footnote 1 in the text.">&#8617;</a>
+            </p></sup>
+    <h2>References</h2>
+        <ul>
+            <li>
+                <a href="https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">The dark art of drillhole desurveying, from the leapfrog3d blog</a>
+                (<a href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">internet archive</a>)
+            </li>
+            <li><a href="http://home.btconnect.com/SiliconDale/silicon13.htm">Drillhole De-Surveying, from Steve Henley's blog</a>
+                (<a href="https://web.archive.org/web/20190628214612/http://home.btconnect.com/SiliconDale/silicon13.htm">internet archive</a>)
+            </li>
+        </ul> -->
+    <h2> <a href="https://github.com/endarthur/endarthur.github.io/issues/9">Comments</a></h3>
+    </div>
+</body>
+</html>

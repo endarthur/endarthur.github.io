@@ -12,7 +12,7 @@
       }
       #mapid { height: 360px; }
     </style>
-    <script src="https://unpkg.com/peerjs@1.0.0/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
     integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
     crossorigin=""/>
@@ -36,7 +36,8 @@
         <a id = "map-link" target="_blank"></a><br>
       <h2>Share using peerjs</h2>
       <button id="get-share">Create share link</button><br />
-        <p id = "share-status"></p>
+        <p id = "share-status"></p><br />
+        <a id = "share-link" target="_blank"></a>
     <h2>Map</h2>
     <div id="mapid"></div>
       <hr />
@@ -81,6 +82,10 @@
         mapLink.href = `https://www.openstreetmap.org/#map=18/${latitude}/${longitude}`;
         mapLink.textContent = `Latitude: ${latitude} °, Longitude: ${longitude} °`;
         setMarker(position.coords);
+        dataHook({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                        });
       }
 
       function error() {
@@ -98,21 +103,28 @@
     let peer;
     function getShareLink() {
         const status = document.querySelector("#share-status");
+        const shareLink = document.querySelector("#share-link");
 
         peer = new Peer({secure: true, debug: 3});
         status.textContent = 'Connecting to peerjs...';
         peer.on('open', function(id){
             console.log('My peer ID is: ' + id);
             status.textContent = 'Awaiting connection...';
-            navigator.share(
+            if (navigator.canShare()) {
+                navigator.share(
                 {
                     title: "Simple Location Share",
                     text: "send this link to whoever will receive your location info",
                     url: `${window.location.href + "#" + id}`
                 }
             ).catch(e => {
+                console.log(e);
                 status.textContent = "Please try again.";
             });
+            } else {
+                shareLink.textContent = shareLink.href = `${window.location.href + "#" + id}`;
+                // mapLink.textContent = `Latitude: ${latitude} °, Longitude: ${longitude} °`;
+            }
         });
 
         peer.on('error', function(err) {
@@ -163,6 +175,7 @@
             conn.on('data', function(data) {
                 status.textContent = `lat: ${data.latitude} lon: ${data.longitude}`;
                 setMarker(data);
+                dataHook(data);
             });
         });
 
@@ -186,6 +199,18 @@
             marker = L.circle([data.latitude, data.longitude], {radius: data.accuracy}).addTo(map);
         }
         map.setView(marker.getLatLng());
+    }
+
+    function dataHook(data) {
+        fetch("http://localhost:8008/location_hook", {
+            method: 'POST',
+            mode: 'no-cors',
+            cache: 'no-cache',
+            headers: {
+                'Content-Type': 'text/plain'
+            },
+            body: JSON.stringify(data)
+        });
     }
 
     document.getElementById("find-me").addEventListener("click", geoFindMe);
