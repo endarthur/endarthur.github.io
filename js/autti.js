@@ -292,11 +292,11 @@ var Auttitude = (function () {
             const b00 = (a00 - q)/p;
             const b11 = (a11 - q)/p;
             const b22 = (a22 - q)/p;
-            const b01 = a00/p;
+            const b01 = a01/p;
             const b02 = a02/p;
             const b12 = a12/p;
     
-            const r = ((b00*b11*b22 + 2*b01*b12*b02) - (b02*b11*b02 + b00*b12*b12 + b01*b01*b22));
+            const r = ((b00*b11*b22 + 2*b01*b12*b02) - (b02*b11*b02 + b00*b12*b12 + b01*b01*b22))/2;
     
             let phi;
     
