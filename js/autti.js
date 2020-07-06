@@ -265,6 +265,64 @@ var Auttitude = (function () {
         ];
     }
 
+    function orientationTensor(data){
+        let a00 = 0.0, a01 = 0.0, a02 = 0.0, a11 = 0.0, a12 = 0.0, a22 = 0.0;
+        for (let i = 0, n = data.length; i < n; i++) {
+            const v = data[i].x;
+            a00 += x[0]*x[0];
+            a01 += x[0]*x[1];
+            a02 += x[0]*x[2];
+            a11 += x[1]*x[2];
+            a12 += x[1]*x[2];
+            a22 += x[2]*x[2];
+        }
+        return [a00, a01, a02, a11, a12, a22];
+    }
+
+    function eig(A){
+        const [a00, a01, a02, a11, a12, a22] = A;
+        const p1 = a00**2 + a02**2 + a12**2;
+        let eig;
+        if (p1 === 0.0) {
+            eig = [a00, a11, a22];
+        } else {
+            const q = (a00 + a11 + a22)/3;
+            const p2 = (a00 - q)**2 + (a11 - q)**2 + (a22 - q)**2 + 2*p1;
+            const p = Math.sqrt(p2/6);
+            const b00 = (a00 - q)/p;
+            const b11 = (a11 - q)/p;
+            const b22 = (a22 - q)/p;
+            const b01 = a00/p;
+            const b02 = a02/p;
+            const b12 = a12/p;
+    
+            const r = ((b00*b11*b22 + 2*b01*b12*b02) - (b02*b11*b02 + b00*b12*b12 + b01*b01*b22));
+    
+            let phi;
+    
+            if (r <= -1) {
+                phi = Math.PI/3;
+            } else if (r >= 1) {
+                phi = 0;
+            } else {
+                phi = Math.acos(r)/3;
+            }
+    
+            eig = [
+                q + 2 * p * Math.cos(phi),
+                q + 2 * p * Math.cos(phi + (2*Math.PI/3)),
+                3 * q - eig1 - eig3
+            ];
+        }
+
+        return [
+            eig,
+            eig.map(
+                e => new Vector([a00 - e, a01, a02]).cross(new Vector([a00, a01 - e, a02])).normalized()
+            )
+        ]
+    }
+
     var Module = {};
     Module.degrees = degrees;
     Module.radians = radians;
@@ -276,6 +334,7 @@ var Auttitude = (function () {
     Module.sphereLine = sphereLine;
     Module.projectEqualArea = projectEqualArea;
     Module.readEqualArea = readEqualArea;
+    Module.eig = eig;
 
     return Module;
 })();
