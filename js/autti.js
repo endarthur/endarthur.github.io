@@ -281,7 +281,7 @@ var Auttitude = (function () {
 
     function eig(A){
         const [a00, a01, a02, a11, a12, a22] = A;
-        const p1 = a00*a00 + a02*a02 + a12*a12;
+        const p1 = a01*a01 + a02*a02 + a12*a12;
         let eig;
         if (p1 === 0.0) {
             eig = [a00, a11, a22];
