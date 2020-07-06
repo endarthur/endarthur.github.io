@@ -281,13 +281,13 @@ var Auttitude = (function () {
 
     function eig(A){
         const [a00, a01, a02, a11, a12, a22] = A;
-        const p1 = a00**2 + a02**2 + a12**2;
+        const p1 = a00*a00 + a02*a02 + a12*a12;
         let eig;
         if (p1 === 0.0) {
             eig = [a00, a11, a22];
         } else {
             const q = (a00 + a11 + a22)/3;
-            const p2 = (a00 - q)**2 + (a11 - q)**2 + (a22 - q)**2 + 2*p1;
+            const p2 = (a00 - q)*(a00 - q) + (a11 - q)*(a11 - q) + (a22 - q)*(a22 - q) + 2*p1;
             const p = Math.sqrt(p2/6);
             const b00 = (a00 - q)/p;
             const b11 = (a11 - q)/p;
