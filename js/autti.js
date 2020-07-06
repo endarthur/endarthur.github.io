@@ -268,7 +268,7 @@ var Auttitude = (function () {
     function orientationTensor(data){
         let a00 = 0.0, a01 = 0.0, a02 = 0.0, a11 = 0.0, a12 = 0.0, a22 = 0.0;
         for (let i = 0, n = data.length; i < n; i++) {
-            const v = data[i].x;
+            const x = data[i].x;
             a00 += x[0]*x[0];
             a01 += x[0]*x[1];
             a02 += x[0]*x[2];
@@ -307,11 +307,13 @@ var Auttitude = (function () {
             } else {
                 phi = Math.acos(r)/3;
             }
-    
+            const eig1 = q + 2 * p * Math.cos(phi);
+            const eig3 = q + 2 * p * Math.cos(phi + (2*Math.PI/3));
+            const eig2 = 3 * q - eig1 - eig3;
             eig = [
-                q + 2 * p * Math.cos(phi),
-                q + 2 * p * Math.cos(phi + (2*Math.PI/3)),
-                3 * q - eig1 - eig3
+                eig1,
+                eig2,
+                eig3
             ];
         }
 
