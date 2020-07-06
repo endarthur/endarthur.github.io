@@ -320,7 +320,7 @@ var Auttitude = (function () {
         return [
             eig,
             eig.map(
-                e => new Vector([a00 - e, a01, a02]).cross(new Vector([a00, a01 - e, a02])).normalized()
+                e => new Vector([a00 - e, a01, a02]).cross(new Vector([a01, a11 - e, a12])).normalized()
             )
         ]
     }
