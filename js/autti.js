@@ -334,6 +334,7 @@ var Auttitude = (function () {
     Module.sphereLine = sphereLine;
     Module.projectEqualArea = projectEqualArea;
     Module.readEqualArea = readEqualArea;
+    Module.orientationTensor = orientationTensor;
     Module.eig = eig;
 
     return Module;
