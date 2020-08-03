@@ -280,6 +280,7 @@ var Auttitude = (function () {
     }
 
     function eig(A){
+        // https://en.wikipedia.org/wiki/Eigenvalue_algorithm#3%C3%973_matrices
         const [a00, a01, a02, a11, a12, a22] = A;
         const p1 = a01*a01 + a02*a02 + a12*a12;
         let eig;

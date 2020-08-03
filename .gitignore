@@ -3,3 +3,6 @@ _site/
 
 # python
 .mypy_cache
+
+# vs code
+.vscode
