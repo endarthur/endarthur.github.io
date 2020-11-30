@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ECMAltine</title>
+    <script src="../js/three/three.js"></script>
+    <script src="../js/three/OrbitControls.js"></script>
+    <script src="../js/three/TransformControls.js"></script>
+
+    <script src="../js/codemirror/codemirror.js"></script>
+    <link rel="stylesheet" href="../js/codemirror/codemirror.css" />
+    <link rel="stylesheet" href="../js/codemirror/hint/show-hint.css" />
+    <link rel="stylesheet" href="../js/codemirror/dialog/dialog.css" />
+    <link rel="stylesheet" href="../js/codemirror/hint/show-hint.css" />
+    <link rel="stylesheet" href="../js/codemirror/tern/tern.css" />
+    <link rel="stylesheet" href="../js/codemirror/lint/lint.css" />
+    <script src="../js/codemirror/javascript.js"></script>
+    <script src="../js/codemirror/comment/comment.js"></script>
+    <!-- <script src="../js/codemirror/addon/javascript-hint.js"></script> -->
+    <script src="../js/codemirror/dialog/dialog.js"></script>
+    <script src="../js/codemirror/hint/show-hint.js"></script>
+    <script src="../js/codemirror/tern/tern.js"></script>
+    <script src="../js/codemirror/lint/lint.js"></script>
+    <script src="https://unpkg.com/jshint@2.9.6/dist/jshint.js"></script>
+    <script src="../js/codemirror/lint/javascript-lint.js"></script>
+    <!-- <script src="../js/codemirror/addon/lint/"></script> -->
+    <script src="https://unpkg.com/acorn/dist/acorn.js"></script>
+    <script src="https://unpkg.com/acorn-loose/dist/acorn-loose.js"></script>
+    <script src="https://unpkg.com/acorn-walk/dist/walk.js"></script>
+    <script src="https://unpkg.com/tern/lib/signal.js"></script>
+    <script src="https://unpkg.com/tern/lib/tern.js"></script>
+    <script src="https://unpkg.com/tern/lib/def.js"></script>
+    <script src="https://unpkg.com/tern/lib/comment.js"></script>
+    <script src="https://unpkg.com/tern/lib/infer.js"></script>
+    <script src="https://unpkg.com/tern/plugin/doc_comment.js"></script>
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+      #info {
+        position: absolute;
+        top: 0px;
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        text-align: center;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        /* pointer-events: none; */
+        z-index: 1; /* TODO Solve this in HTML */
+      }
+      body {
+        margin: 0;
+        background-color: #ececec;
+        /* color: #fff; */
+        font-family: Monospace;
+        font-size: 13px;
+        line-height: 24px;
+        overscroll-behavior: none;
+      }
+      /* The side navigation menu */
+      .sidenav {
+        /* https://stackoverflow.com/a/3037901/1457481 */
+        box-sizing: border-box;
+        height: 100%; /* 100% Full-height */
+        width: 600px; /* 0 width - change this with JavaScript */
+        position: fixed; /* Stay in place */
+        z-index: 10; /* Stay on top */
+        top: 0; /* Stay at the top */
+        left: 0;
+        background-color: #dfdfdf;
+        overflow-x: hidden; /* Disable horizontal scroll */
+        padding-top: 60px; /* Place content 60px from the top */
+        padding-bottom: 20px;
+        /* transition: 0.2s; */
+        resize: horizontal;
+        overflow: auto;
+        border: 1px solid grey;
+        display: grid;
+        grid-template-areas:
+          "cm cm"
+          ". compile";
+      }
+
+      /* The navigation menu links */
+      .sidenav a {
+        padding: 8px 8px 8px 32px;
+        text-decoration: none;
+        font-size: 25px;
+        color: #818181;
+        display: block;
+        transition: 0.3s;
+      }
+
+      /* When you mouse over the navigation links, change their color */
+      .sidenav a:hover {
+        color: #f1f1f1;
+      }
+
+      /* Position and style the close button (top right corner) */
+      .sidenav .closebtn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        font-size: 36px;
+        margin-left: 50px;
+      }
+
+      .openbtn {
+        z-index: 1;
+        padding: 8px 8px 8px 8px;
+        text-decoration: none;
+        font-size: 25px;
+        color: #818181;
+        display: block;
+        transition: 0.3s;
+        position: absolute;
+        top: 5px;
+        left: 8px;
+        font-size: 36px;
+        /* margin-left: 50px; */
+      }
+
+      .openbtn:hover {
+        color: #f4f4f4;
+      }
+
+      /* https://stackoverflow.com/a/272733/1457481 */
+      /* textarea {
+        border: 1px solid #999999;
+        width: 98%;
+        margin: 5px 0;
+        padding: 1%;
+      } */
+
+      /* Style page content - use this if you want to push the page content to the right when you open the side navigation
+      #main {
+        transition: margin-left 0.5s;
+        padding: 20px;
+      } */
+
+      /* On smaller screens, where height is less than 450px, change the style of the sidenav (less padding and a smaller font size) */
+      @media screen and (max-height: 450px) {
+        .sidenav {
+          padding-top: 15px;
+        }
+        .sidenav a {
+          font-size: 18px;
+        }
+      }
+
+      .CodeMirror {
+        border: 1px solid #eee;
+        height: auto;
+        min-width: 0px;
+        grid-area: cm;
+      }
+      .CodeMirror-scroll {
+        overflow-y: hidden;
+        overflow-x: auto;
+      }
+
+      #compile {
+        grid-area: compile;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">
+      "W" translate | "E" scale | "R" rotate | "+/-" adjust size<br />
+      "Q" toggle world/local space | "Shift" snap to grid | "S" toggle screen space panning<br />
+      "X" toggle X | "Y" toggle Y | "Z" toggle Z | "Spacebar" toggle enabled<br />
+      "C" toggle camera | double click to select section <br />
+    </div>
+    <a href="javascript:void(0)" class="openbtn" onclick="openNav()"
+    >☰</a
+  >
+    <div id="mySidenav" class="sidenav">
+      <a href="javascript:void(0)" class="closebtn" onclick="closeNav()"
+        >☰</a
+      >
+      <textarea id="malt-src" cols="30" rows="40">
+const p0 = Plane(90, 1.0);
+const p1 = Plane(90.0, 60.0);
+const p2 = Plane(-90.0, 60.0);
+
+const gr1 = PlanarFault(
+  p1,
+  new THREE.Vector3(-400.0, 0.0, 0.0),
+  DipVector(p1).multiplyScalar(70.0),
+  false
+);
+const gr2 = PlanarFault(
+  p2,
+  new THREE.Vector3(400.0, 0.0, 0.0),
+  DipVector(p2).multiplyScalar(-70.0),
+  true
+);
+const liths = [4, 3, 2, 1].map((code) =>
+  Lith(
+    PlanarSurface(p0, new THREE.Vector3(0.0, -200 + 25 * code, 0.0)),
+    code
+  )
+);
+
+const fold1 = SinusoidalFold(north, Plane(85, 80), origin, 20.0, 30.0);
+
+const fold2 = SinusoidalFold(north, Plane(82, 10), origin, 70.0, 30.0);
+
+const fold3 = SinusoidalFold(
+  north,
+  Plane(100, 80),
+  origin,
+  10.0,
+  300.0
+);
+
+let model = Model([
+  Lith(
+    PlanarSurface(Plane(-90, 4), new THREE.Vector3(0.0, 60.0, 0.0)),
+    5
+  ),
+  gr1,
+  gr2,
+  fold3,
+  fold2,
+  fold1,
+  PlanarFault(
+    Plane(90, 60),
+    origin,
+    DipVector(Plane(90, 60)).multiplyScalar(100)
+  ),
+  ...liths,
+]);
+      </textarea>
+      <button id="compile" onclick="compileModel()">run</button>
+    </div>
+    <script>
+      const sideNav = document.getElementById("mySidenav");
+      let sideNavWidth = "600px";
+      /* Set the width of the side navigation to 250px */
+      function openNav() {
+        sideNav.style.width = sideNavWidth;
+        // https://gomakethings.com/automatically-detecting-when-transitions-end-with-vanilla-javascript/
+        sideNav.style.transition = "0.2s";
+        sideNav.addEventListener("transitionend", function(){
+          sideNav.style.transition = "";
+        });
+      }
+
+      /* Set the width of the side navigation to 0 */
+      function closeNav() {
+        sideNavWidth = sideNav.style.width;
+        sideNav.style.width = "0";
+        sideNav.style.transition = "0.2s";
+        sideNav.addEventListener("transitionend", function(){
+          sideNav.style.transition = "";
+        });
+      }
+
+      let cameraPersp, cameraOrtho, currentCamera;
+      let scene, renderer, control, orbit;
+      let maltData;
+      let texture;
+      let maltTransform;
+      const up = new THREE.Vector3(0.0, 1.0, 0.0);
+      const north = new THREE.Vector3(0.0, 0.0, -1.0);
+      const origin = new THREE.Vector3(0.0, 0.0, 0.0);
+      const m_width = 128,
+        m_height = 128,
+        m_depth = 128;
+
+      let sections = [];
+
+      function getURL(url, c) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("get", url, true);
+        xhr.send();
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState != 4) return;
+          if (xhr.status < 400) return c(null, xhr.responseText);
+          var e = new Error(xhr.responseText || "No response");
+          e.status = xhr.status;
+          c(e);
+        };
+      }
+
+      var server;
+      getURL(
+        "https://unpkg.com/tern/defs/ecmascript.json",
+        function (err, code) {
+          if (err) throw new Error("Request for ecmascript.json: " + err);
+          server = new CodeMirror.TernServer({ defs: [JSON.parse(code)] });
+          editor.setOption("extraKeys", {
+            "Ctrl-Space": function (cm) {
+              server.complete(cm);
+            },
+            "Ctrl-I": function (cm) {
+              server.showType(cm);
+            },
+            "Shift-Ctrl-Space": function (cm) {
+              server.showDocs(cm);
+            },
+            "Alt-.": function (cm) {
+              server.jumpToDef(cm);
+            },
+            "Alt-,": function (cm) {
+              server.jumpBack(cm);
+            },
+            F2: function (cm) {
+              server.rename(cm);
+            },
+            "Ctrl-.": function (cm) {
+              server.selectName(cm);
+            },
+            "Ctrl-Q": "toggleComment",
+            "Ctrl-Enter": compileModel,
+          });
+          editor.on("cursorActivity", function (cm) {
+            server.updateArgHints(cm);
+          });
+        }
+      );
+
+      let editor = CodeMirror.fromTextArea(
+        document.getElementById("malt-src"),
+        {
+          lineNumbers: true,
+          matchBrackets: true,
+          // continueComments: "Enter",
+          // extraKeys: {
+          //   "Ctrl-/": "toggleComment",
+          //   "Ctrl-;": "toggleComment",
+          //   "Ctrl-Space": "autocomplete",
+          //   "Ctrl-Enter": compileModel,
+          // },
+          mode: { name: "javascript", globalVars: true },
+          lint: {
+            esversion: 6,
+          },
+        }
+      );
+
+      Plane = function (dd, d) {
+        return new THREE.Vector3().setFromSphericalCoords(
+          1.0,
+          THREE.MathUtils.degToRad(d),
+          THREE.MathUtils.degToRad(180 - dd)
+        );
+      };
+
+      function PlanarSurface(plane, point, polarity = 1.0) {
+        const surface = new THREE.Plane().setFromNormalAndCoplanarPoint(
+          plane,
+          point
+        );
+        return (X) => polarity * surface.distanceToPoint(X);
+      }
+
+      function DipVector(plane) {
+        return new THREE.Vector3()
+          .crossVectors(up, plane)
+          .cross(plane)
+          .normalize();
+      }
+
+      function PlanarFault(
+        plane,
+        point,
+        displacement,
+        footwall_movement = false
+      ) {
+        const faultSurface = PlanarSurface(
+          plane,
+          point,
+          footwall_movement ? -1.0 : 1.0
+        );
+        return (X, v) => {
+          if (faultSurface(X) > 0) {
+            X.add(displacement);
+          }
+          return [X, v];
+        };
+      }
+
+      function SinusoidalFold(
+        hinge,
+        axial_plane_normal,
+        point,
+        amplitude,
+        wavelength
+      ) {
+        const axial_trace = new THREE.Vector3()
+          .crossVectors(axial_plane_normal, hinge)
+          .normalize();
+        const axialPlane = PlanarSurface(axial_plane_normal, point);
+        return (X, v) => {
+          X.addScaledVector(
+            axial_trace,
+            amplitude * Math.sin(axialPlane(X) / wavelength)
+          );
+          return [X, v];
+        };
+      }
+
+      function Lith(surface, code) {
+        return (X, v) => [X, surface(X) > 0 ? code : v];
+      }
+
+      function Model(events) {
+        return (X) => {
+          let code = 0;
+          for (let i = 0; i < events.length; i++) {
+            const event = events[i];
+            [X, code] = event(X, code);
+            if (code !== 0) {
+              break;
+            }
+          }
+          return code;
+        };
+      }
+
+      maltTransform = new THREE.OrthographicCamera(
+        -500,
+        500,
+        100,
+        -150,
+        -500,
+        500
+      );
+      maltTransform.updateProjectionMatrix();
+
+      colors = {
+        0: [0, 0, 0, 255],
+        1: [255, 0, 0, 255],
+        2: [0, 255, 0, 255],
+        3: [0, 0, 255, 255],
+        4: [255, 255, 0, 255],
+        5: [0, 255, 255, 0],
+      };
+
+      maltData = new Uint8Array(4 * m_width * m_height * m_depth);
+      function runModel(model) {
+        console.time("model compilation");
+        const X = new THREE.Vector3(0.0, 0.0, 0.0);
+        let ijk = 0;
+        for (let k = 0; k < m_depth; k++) {
+          const z_ = (2 * (k - m_depth / 2.0)) / m_depth;
+          for (let j = 0; j < m_height; j++) {
+            const y_ = (2 * (j - m_height / 2.0)) / m_height;
+            for (let i = 0; i < m_width; i++) {
+              const x_ = (2 * (i - m_width / 2.0)) / m_width;
+              X.set(x_, y_, z_);
+              X.applyMatrix4(maltTransform.projectionMatrixInverse);
+              const [r, g, b, a] = colors[model(X)];
+              maltData[ijk++] = r;
+              maltData[ijk++] = g;
+              maltData[ijk++] = b;
+              maltData[ijk++] = a;
+            }
+          }
+        }
+        console.timeEnd("model compilation");
+      }
+
+      function compileModel() {
+        const source = editor.getValue();
+        const model = new Function(`
+        ${source}
+        return model;
+        `)();
+        runModel(model);
+        texture.needsUpdate = true;
+        render();
+      }
+
+      function ondblclick(event) {
+        x = (event.clientX / window.innerWidth) * 2 - 1;
+        y = -(event.clientY / window.innerHeight) * 2 + 1;
+        dir = new THREE.Vector3(x, y, -1);
+        dir.unproject(currentCamera);
+
+        ray = new THREE.Raycaster(
+          currentCamera.position,
+          dir.sub(currentCamera.position).normalize()
+        );
+        var intersects = ray.intersectObjects(sections);
+        if (intersects.length > 0) {
+          control.attach(intersects[0].object);
+        }
+      }
+
+      document.addEventListener("dblclick", ondblclick, false);
+
+      init();
+      render();
+      compileModel();
+
+      function init() {
+        renderer = new THREE.WebGLRenderer({ alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        const three_canvas = renderer.domElement;
+        three_canvas.addEventListener("pointerdown", (e) => {
+          editor.display.input.blur();
+        });
+
+        const aspect = window.innerWidth / window.innerHeight;
+
+        cameraPersp = new THREE.PerspectiveCamera(50, aspect, 0.01, 30000);
+        cameraOrtho = new THREE.OrthographicCamera(
+          -600 * aspect,
+          600 * aspect,
+          600,
+          -600,
+          0.01,
+          30000
+        );
+        currentCamera = cameraPersp;
+
+        currentCamera.position.set(1000, 500, 1000);
+        currentCamera.lookAt(0, 200, 0);
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xececec);
+
+        scene.add(new THREE.GridHelper(1000, 10, 0x888888, 0x444444));
+
+        const light = new THREE.AmbientLight(0xa0a0a0); // soft white light
+        scene.add(light);
+
+        // const texture = new THREE.TextureLoader().load(
+        //   "textures/crate.gif",
+        //   render
+        // );
+        // texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+        texture = new THREE.DataTexture3D(maltData, m_width, m_height, m_depth);
+        texture.internalFormat = "RGBA8";
+        texture.format = THREE.RGBAFormat;
+        texture.type = THREE.UnsignedByteType;
+        texture.magFilter = THREE.LinearFilter;
+        texture.minFilter = THREE.LinearFilter;
+        texture.flipY = false;
+
+        const geometry = new THREE.PlaneBufferGeometry(1000, 500);
+        const material = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          emissive: 0x072534,
+          side: THREE.DoubleSide,
+          //   flatShading: true,
+        });
+
+        // https://threejsfundamentals.org/threejs/lessons/threejs-optimize-lots-of-objects-animated.html
+        // console.log(maltTransform.projectionMatrix);
+        material.onBeforeCompile = (shader) => {
+          shader.uniforms.malt = { value: texture };
+          shader.uniforms.maltTransform = {
+            value: maltTransform.projectionMatrix,
+          };
+          //   console.log(shader.vertexShader);
+          //   console.log(shader.fragmentShader);
+
+          const vertexShaderReplacements = [
+            {
+              from: "#include <common>",
+              to: `
+                    #include <common>
+                    out vec3 maltPosition;
+                    uniform mat4 maltTransform;
+                    `,
+            },
+            {
+              from: "#include <project_vertex>",
+              to: `
+                    #include <project_vertex>
+                    maltPosition = (((maltTransform * modelMatrix * vec4( transformed, 1.0 )) + 1.0f)/2.0f).xyz ;
+                    `,
+            },
+          ];
+
+          const fragmentShaderReplacements = [
+            {
+              from: "#include <common>",
+              to: `
+                    #include <common>
+                    uniform highp sampler3D malt;
+                    in vec3 maltPosition;
+                    `,
+            },
+            {
+              from: "#include <color_fragment>",
+              to: `
+                    if(
+                      maltPosition.x < 0.0f
+                      || maltPosition.x > 1.0f
+                      || maltPosition.y < 0.0f
+                      || maltPosition.y > 1.0f
+                      || maltPosition.z < 0.0f
+                      || maltPosition.z > 1.0f
+                    ) discard;
+                    diffuseColor.rgba = texture(malt, maltPosition);
+                    if(diffuseColor.a < 1.0) discard;
+                    `,
+            },
+          ];
+
+          //
+
+          vertexShaderReplacements.forEach((rep) => {
+            shader.vertexShader = shader.vertexShader.replace(rep.from, rep.to);
+          });
+
+          fragmentShaderReplacements.forEach((rep) => {
+            shader.fragmentShader = shader.fragmentShader.replace(
+              rep.from,
+              rep.to
+            );
+          });
+        };
+
+        orbit = new THREE.OrbitControls(currentCamera, renderer.domElement);
+        orbit.update();
+        orbit.addEventListener("change", render);
+
+        control = new THREE.TransformControls(
+          currentCamera,
+          renderer.domElement
+        );
+        control.addEventListener("change", render);
+
+        control.addEventListener("dragging-changed", function (event) {
+          orbit.enabled = !event.value;
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        const geometry2 = new THREE.PlaneBufferGeometry(1000, 500);
+        const mesh2 = new THREE.Mesh(geometry2, material);
+        geometry2.rotateY(Math.PI / 2);
+        scene.add(mesh2);
+
+        // const geometry3 = new THREE.PlaneBufferGeometry(1000, 1000);
+        // const mesh3 = new THREE.Mesh(geometry3, material);
+        // mesh3.translateY(maltTransform.bottom);
+        // mesh3.rotateX(Math.PI / 2);
+        // scene.add(mesh3);
+
+        sections.push(mesh, mesh2);
+
+        control.attach(mesh);
+        scene.add(control);
+
+        window.addEventListener("resize", onWindowResize, false);
+
+        window.addEventListener("keydown", function (event) {
+          if (editor.hasFocus()) {
+            return;
+          }
+          switch (event.keyCode) {
+            case 81: // Q
+              control.setSpace(control.space === "local" ? "world" : "local");
+              break;
+
+            case 16: // Shift
+              control.setTranslationSnap(100);
+              control.setRotationSnap(THREE.MathUtils.degToRad(15));
+              control.setScaleSnap(0.25);
+              break;
+
+            case 87: // W
+              control.setMode("translate");
+              break;
+
+            case 69: // E
+              control.setMode("scale");
+              break;
+
+            case 82: // R
+              control.setMode("rotate");
+              break;
+
+            case 83: // S
+              orbit.screenSpacePanning = !orbit.screenSpacePanning;
+              break;
+
+            case 67: // C
+              const position = currentCamera.position.clone();
+
+              currentCamera = currentCamera.isPerspectiveCamera
+                ? cameraOrtho
+                : cameraPersp;
+              currentCamera.position.copy(position);
+
+              orbit.object = currentCamera;
+              control.camera = currentCamera;
+
+              currentCamera.lookAt(
+                orbit.target.x,
+                orbit.target.y,
+                orbit.target.z
+              );
+              onWindowResize();
+              break;
+
+            case 187:
+            case 107: // +, =, num+
+              control.setSize(control.size + 0.1);
+              break;
+
+            case 189:
+            case 109: // -, _, num-
+              control.setSize(Math.max(control.size - 0.1, 0.1));
+              break;
+
+            case 88: // X
+              control.showX = !control.showX;
+              break;
+
+            case 89: // Y
+              control.showY = !control.showY;
+              break;
+
+            case 90: // Z
+              control.showZ = !control.showZ;
+              break;
+
+            case 32: // Spacebar
+              control.enabled = !control.enabled;
+              break;
+          }
+        });
+
+        window.addEventListener("keyup", function (event) {
+          switch (event.keyCode) {
+            case 16: // Shift
+              control.setTranslationSnap(null);
+              control.setRotationSnap(null);
+              control.setScaleSnap(null);
+              break;
+          }
+        });
+      }
+
+      function onWindowResize() {
+        const aspect = window.innerWidth / window.innerHeight;
+
+        cameraPersp.aspect = aspect;
+        cameraPersp.updateProjectionMatrix();
+
+        cameraOrtho.left = cameraOrtho.bottom * aspect;
+        cameraOrtho.right = cameraOrtho.top * aspect;
+        cameraOrtho.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        render();
+      }
+
+      function render() {
+        renderer.render(scene, currentCamera);
+      }
+    </script>
+  </body>
+</html>

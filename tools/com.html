@@ -147,7 +147,7 @@
     }
 
     if (window.location.hash) {
-      shareLink.disabled = true;
+      // shareLink.disabled = true;
       const encodedData = window.location.hash.substring(1);
       const decodedData = decodeURIComponent(encodedData);
       const parsedData = JSON.parse(decodedData);
@@ -155,9 +155,6 @@
         initiator: false,
         trickle: false
       });
-
-      peer.signal(parsedData);
-      status.textContent = "Gathering response ICE...";
 
       peer.on("signal", data => {
         if (!connected) {
@@ -181,6 +178,9 @@
         }
       });
 
+      peer.signal(parsedData);
+      status.textContent = "Gathering response ICE...";
+      
       peerSetup();
     }
 
