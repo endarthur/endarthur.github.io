@@ -50,7 +50,7 @@
         -webkit-user-select: none;
         -ms-user-select: none;
         user-select: none;
-        /* pointer-events: none; */
+        pointer-events: none;
         z-index: 1; /* TODO Solve this in HTML */
       }
       body {
@@ -172,17 +172,14 @@
   <body>
     <div id="info">
       "W" translate | "E" scale | "R" rotate | "+/-" adjust size<br />
-      "Q" toggle world/local space | "Shift" snap to grid | "S" toggle screen space panning<br />
+      "Q" toggle world/local space | "Shift" snap to grid | "S" toggle screen
+      space panning<br />
       "X" toggle X | "Y" toggle Y | "Z" toggle Z | "Spacebar" toggle enabled<br />
       "C" toggle camera | double click to select section <br />
     </div>
-    <a href="javascript:void(0)" class="openbtn" onclick="openNav()"
-    >☰</a
-  >
+    <a href="javascript:void(0)" class="openbtn" onclick="openNav()">☰</a>
     <div id="mySidenav" class="sidenav">
-      <a href="javascript:void(0)" class="closebtn" onclick="closeNav()"
-        >☰</a
-      >
+      <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">☰</a>
       <textarea id="malt-src" cols="30" rows="40">
 const p0 = Plane(90, 1.0);
 const p1 = Plane(90.0, 60.0);
@@ -247,7 +244,7 @@ let model = Model([
         sideNav.style.width = sideNavWidth;
         // https://gomakethings.com/automatically-detecting-when-transitions-end-with-vanilla-javascript/
         sideNav.style.transition = "0.2s";
-        sideNav.addEventListener("transitionend", function(){
+        sideNav.addEventListener("transitionend", function () {
           sideNav.style.transition = "";
         });
       }
@@ -257,7 +254,7 @@ let model = Model([
         sideNavWidth = sideNav.style.width;
         sideNav.style.width = "0";
         sideNav.style.transition = "0.2s";
-        sideNav.addEventListener("transitionend", function(){
+        sideNav.addEventListener("transitionend", function () {
           sideNav.style.transition = "";
         });
       }
@@ -491,7 +488,12 @@ let model = Model([
         );
         var intersects = ray.intersectObjects(sections);
         if (intersects.length > 0) {
-          control.attach(intersects[0].object);
+          control.attach(intersects[0].object.parent);
+          sections.forEach(
+            (obj) => (obj.parent.children[1].material.visible = false)
+          );
+          intersects[0].object.parent.children[1].material.visible = true;
+          render();
         }
       }
 
@@ -535,6 +537,11 @@ let model = Model([
         const light = new THREE.AmbientLight(0xa0a0a0); // soft white light
         scene.add(light);
 
+        // scene.add(new THREE.HemisphereLight(0x443333, 0x111122));
+
+        addShadowedLight(1, 1, 1, 0xffffff, 1.35);
+        addShadowedLight(0.5, 1, -1, 0xffffff, 1);
+
         // const texture = new THREE.TextureLoader().load(
         //   "textures/crate.gif",
         //   render
@@ -554,6 +561,7 @@ let model = Model([
           color: 0xffffff,
           emissive: 0x072534,
           side: THREE.DoubleSide,
+          roughness: 0.8
           //   flatShading: true,
         });
 
@@ -640,12 +648,29 @@ let model = Model([
         });
 
         const mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh);
+        const edges1 = new THREE.EdgesGeometry(geometry);
+        const line1 = new THREE.LineSegments(
+          edges1,
+          new THREE.LineBasicMaterial({ color: 0x0c0c0c })
+        );
+        const group1 = new THREE.Group();
+        group1.add(mesh);
+        group1.add(line1);
+        scene.add(group1);
 
         const geometry2 = new THREE.PlaneBufferGeometry(1000, 500);
         const mesh2 = new THREE.Mesh(geometry2, material);
         geometry2.rotateY(Math.PI / 2);
-        scene.add(mesh2);
+        const edges2 = new THREE.EdgesGeometry(geometry2);
+        const line2 = new THREE.LineSegments(
+          edges2,
+          new THREE.LineBasicMaterial({ color: 0x0c0c0c })
+        );
+        line2.material.visible = false;
+        const group2 = new THREE.Group();
+        group2.add(mesh2);
+        group2.add(line2);
+        scene.add(group2);
 
         // const geometry3 = new THREE.PlaneBufferGeometry(1000, 1000);
         // const mesh3 = new THREE.Mesh(geometry3, material);
@@ -655,7 +680,7 @@ let model = Model([
 
         sections.push(mesh, mesh2);
 
-        control.attach(mesh);
+        control.attach(group1);
         scene.add(control);
 
         window.addEventListener("resize", onWindowResize, false);
@@ -766,6 +791,28 @@ let model = Model([
 
       function render() {
         renderer.render(scene, currentCamera);
+      }
+
+      function addShadowedLight(x, y, z, color, intensity) {
+        var directionalLight = new THREE.DirectionalLight(color, intensity);
+        directionalLight.position.set(x, y, z);
+        scene.add(directionalLight);
+
+        directionalLight.castShadow = true;
+
+        var d = 1;
+        directionalLight.shadow.camera.left = -d;
+        directionalLight.shadow.camera.right = d;
+        directionalLight.shadow.camera.top = d;
+        directionalLight.shadow.camera.bottom = -d;
+
+        directionalLight.shadow.camera.near = 1;
+        directionalLight.shadow.camera.far = 4;
+
+        directionalLight.shadow.mapSize.width = 1024;
+        directionalLight.shadow.mapSize.height = 1024;
+
+        directionalLight.shadow.bias = -0.001;
       }
     </script>
   </body>
