@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="../js/dat.gui.min.js"></script>
+    <script src="https://aframe.io/releases/1.1.0/aframe.min.js"></script>
+    <script src="https://rawgit.com/jeromeetienne/AR.js/master/aframe/build/aframe-ar.min.js"></script>
+    <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
+  </head>
+
+  <body style="margin: 0px; overflow: hidden">
+    <!-- we add detectionMode and matrixCodeType to tell AR.js to recognize barcode markers -->
+    <a-scene
+      embedded
+      renderer="logarithmicDepthBuffer: true"
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+      gesture-detector
+    >
+      <a-marker
+        type="barcode"
+        value="5"
+        raycaster="objects: .clickable"
+        emitevents="true"
+        cursor="fuse: false; rayOrigin: mouse;"
+        id="markerA"
+      >
+        <a-gltf-model
+          id="model"
+          scale="0.2 0.2 0.2"
+          position="0 0 0"
+          class="clickable"
+          gesture-handler
+        ></a-gltf-model>
+      </a-marker>
+      <a-entity camera></a-entity>
+    </a-scene>
+    <input id="myInput" type="file" style="visibility: hidden" />
+    <script>
+      let fileInput = document.getElementById("myInput");
+      let model = document.getElementById("model");
+      var params = {
+        loadFile: function () {
+            fileInput.click();
+        },
+      };
+      fileInput.addEventListener('change', (e) => {
+        let url = URL.createObjectURL(fileInput.files[0]);
+        model.setAttribute("src", url);
+      });
+      var gui = new dat.GUI();
+      gui.add(params, "loadFile").name("Load .glb file");
+    </script>
+  </body>
+</html>
