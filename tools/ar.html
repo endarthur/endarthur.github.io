@@ -5,6 +5,7 @@
     <script src="https://aframe.io/releases/1.1.0/aframe.min.js"></script>
     <script src="https://rawgit.com/jeromeetienne/AR.js/master/aframe/build/aframe-ar.min.js"></script>
     <script src="../js/gestures.js"></script>
+    <script src="../js/autoscale.js"></script>
   </head>
 
   <body style="margin: 0px; overflow: hidden">
@@ -25,7 +26,7 @@
       >
         <a-gltf-model
           id="model"
-          scale="0.2 0.2 0.2"
+          autoscale="2"
           position="0 0 0"
           class="clickable"
           gesture-handler
