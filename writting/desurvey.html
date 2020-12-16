@@ -1,157 +1,588 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Practical Desurvey</title>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML' async></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"
+      async
+    ></script>
+    <script src="../js/three/three.js"></script>
+    <script src="../js/three/OrbitControls.js"></script>
     <style>
-        .content {
-            max-width: 960px;
-            margin: auto;
-        }
-    </style>
-</head>
+      .content {
+        max-width: 960px;
+        margin: auto;
+      }
 
-<body>
+      canvas {
+        width: 100%;
+        height: 100%;
+      }
+
+      #data-entry {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        grid-column-gap: 30px;
+      }
+      /* #collar {
+          margin-right: auto;
+      }
+
+      #survey {
+          margin-left: auto;
+      } */
+    </style>
+  </head>
+
+  <body>
     <div class="content">
-        <h1>Practical Desurvey</h1>
-        <nav>
-            <a href="../index.html">Home</a>
-            <a href="../site.html">Site</a>
-        </nav>
-        <span id="page-created">created: <em>2019-06-27</em></span>
-        <span id="page-modified">modified: <em>2019-06-28</em></span>
-        <h2>Introduction</h2>
+      <h1>Practical Desurvey</h1>
+      <nav>
+        <a href="../index.html">Home</a>
+        <a href="../site.html">Site</a>
+      </nav>
+      <span id="page-created">created: <em>2019-06-27</em></span>
+      <span id="page-modified">modified: <em>2019-06-28</em></span>
+      <h2>Introduction</h2>
+      <p>
+        Desurvey is the practice of obtaining the geometry of a drillhole
+        through its deviation survey data.
+      </p>
+      <p>
+        Here we present two methods: <a href="#tangent-method">tangent</a> and
+        <a href="#spherical-arc">spherical arc</a>.
+        <!-- Both are implemented in javascript and python, MIT licensed. -->
+      </p>
+      <h2>Definitions</h2>
+      Considering a right-handed coordinate system, with \(x\) pointing east,
+      \(y\) north and \(z\) up,
+      <ul>
+        <li>
+          \(x_i\) &mdash; the spatial location vector of each survey point,
+          being \(x_0\) given as the collar of the drillhole.
+        </li>
+        <li>
+          \(v_i\) &mdash; the plunge vector of the drillhole at the survey
+          points. It is usually calculated from the measured trend \(\theta\)
+          and plunge \(\phi\), with positive plunge downwards: $$ v_i =
+          \begin{bmatrix} \sin(\theta)\cos(\phi)\\ \cos(\theta)\cos(\phi)\\
+          -\sin(\phi)\\ \end{bmatrix} $$
+        </li>
+        <li>
+          \(a_i\) &mdash; the position along the drillhole on where each survey
+          was made.
+        </li>
+        <li>
+          \(s_i\) &mdash; the length of the segment between each \(i\) and
+          \(i+1\) survey points, that is, $$s_i = a_{i+1} - a_i$$
+        </li>
+      </ul>
+      <a name="tangent-method"></a>
+      <h2><a href="#tangent-method">Tangent</a></h2>
+      <p>
+        The simplest method is to consider the drillhole a sequence of straight
+        segments with the same down-hole orientation as the last survey point.
+        For that, we simply accumulate \(s_i v_i\) from \(x_0\) to obtain each
+        \(x_{i+1}\) in sequence: $$ x_{i+1} = x_0 + \sum_{j=0}^{i} s_j v_j $$
+      </p>
+      <p>
+        To obtain the coordinates of an arbitrary point \(p\) at position \(d\)
+        along the drillhole find \(i\) such that \(a_{i+1} > d\), then $$ p =
+        x_i + (d - a_i) v_i \label{tangent}\tag{1} $$
+      </p>
+      <a name="spherical-arc"></a>
+      <h2><a href="#spherical-arc">Spherical arc</a></h2>
+      <p>
+        The spherical arc method, also known as minimum curvature, treats each
+        segment of the drillhole as a great circle arc with length \(s_i\) that
+        encompass the angle<sup><a href="#fn1" id="ref1">1</a></sup>
+        \(\alpha_i\) between each survey point \(i\) and its successor \(i+1\).
+        Being \(\alpha\) in radians, the radius \(r_i\) of the sphere can be
+        calculated as $$ r_i = {s_i \over \alpha_i} $$
+      </p>
+      <p>
+        To obtain the center \(c_i\) of the sphere, we must offset \(x_i\) a
+        distance \(r_i\) perpendicular to \(v_i\) on the plane spanning \(v_i\)
+        and \(v_{i+1}\). The normal \(n_i\) to this plane is obtained through $$
+        n_i = {{v_i \times v_{i+1}} \over {|v_i \times v_{i+1}|}} $$
+      </p>
+      <p>
+        from this, the vector \(q_i\) perpendicular to \(v_i\) is simply $$ q_i
+        = n_i \times v_i $$
+      </p>
+      <p>being the center then $$ c_i = x_i + r n_i \times v_i. $$</p>
+      <p>
+        Using \(v_i\) and \(q_i\) as an orthogonal pair spanning the plane, the
+        position of the next survey point \(x_{i+1}\) is built as $$ x_{i+1} =
+        c_i - r q_i cos (\alpha_i) + r v_i sin (\alpha_i)
+        \label{sphere_survey}\tag{2} $$
+      </p>
+      <p>
+        Similarly, an arbitrary point \(p\) at position \(d\) along the
+        drillhole is found using \(i\) such that \(a_{i+1} > d\). Its angular
+        position \(\theta\) along the great circle is $$ \theta = {{d - a_i}
+        \over r_i} $$
+      </p>
+      <p>
+        This angle can be plugged into equation \(\ref{sphere_survey}\) instead
+        of \(\alpha\) so that we get $$ p = c_i - r q_i cos (\theta) + r v_i sin
+        (\theta) \label{sphere}\tag{3} $$
+      </p>
+      <a name="interactive-tool"></a>
+      <h2><a href="#interactive-tool">Interactive Example</a></h2>
+      <canvas id="three-canvas"></canvas>
+      <div id="data-entry">
+        <div id="collar"></div>
+        <div id="survey"></div>
+      </div>
+
+      <hr />
+      <sup id="fn1">
         <p>
-            Desurvey is the practice of obtaining the geometry of a drillhole through
-            its deviation survey data.
+          1. Always check if the angle between two consecutive survey points is
+          not zero or near zero; if so, use the tangent method for the segment
+          instead of spherical arc, as the numerical precision might blow up and
+          give you bad results.
         </p>
         <p>
-            Here we present two methods: <a href="#tangent-method">tangent</a> and <a href="#spherical-arc">spherical
-                arc</a>.
-            <!-- Both are implemented in javascript and python, MIT licensed. -->
-        </p>
-        <h2>Definitions</h2>
-        Considering a right-handed coordinate system, with \(x\) pointing east, \(y\) north and \(z\) up,
-        <ul>
-            <li>
-                \(x_i\) &mdash; the spatial location vector of each survey point, being \(x_0\) given as the collar of
-                the drillhole.
-            </li>
-            <li>
-                \(v_i\) &mdash; the plunge vector of the drillhole at the survey points. It is usually calculated from
-                the measured
-                trend \(\theta\) and plunge \(\phi\), with positive plunge downwards:
-                $$
-                v_i = \begin{bmatrix}
-                \sin(\theta)\cos(\phi)\\
-                \cos(\theta)\cos(\phi)\\
-                -\sin(\phi)\\
-                \end{bmatrix}
-                $$
-            </li>
-            <li>
-                \(a_i\) &mdash; the position along the drillhole on where each survey was made.
-            </li>
-            <li>
-                \(s_i\) &mdash; the length of the segment between each \(i\) and \(i+1\) survey points, that is,
-                $$s_i = a_{i+1} - a_i$$
-            </li>
-        </ul>
-        <a name="tangent-method"></a>
-        <h2><a href="#tangent-method">Tangent</a></h2>
-        <p>
-            The simplest method is to consider the drillhole a sequence of straight segments
-            with the same down-hole orientation as the last survey point. For that, we simply accumulate \(s_i v_i\)
-            from \(x_0\) to
-            obtain each \(x_{i+1}\) in sequence:
-            $$
-            x_{i+1} = x_0 + \sum_{j=0}^{i} s_j v_j
-            $$
-        </p>
-        <p>
-            To obtain the coordinates of an arbitrary point \(p\) at position \(d\) along the drillhole find \(i\) such
-            that
-            \(a_{i+1} > d\), then
-            $$
-            p = x_i + (d - a_i) v_i \label{tangent}\tag{1}
-            $$
-        </p>
-        <a name="spherical-arc"></a>
-        <h2><a href="#spherical-arc">Spherical arc</a></h2>
-        <p>
-            The spherical arc method, also known as minimum curvature, treats each segment of the drillhole as a great
-            circle arc with
-            length \(s_i\) that encompass the angle<sup><a href="#fn1" id="ref1">1</a></sup> \(\alpha_i\) between each
-            survey point \(i\) and its successor
-            \(i+1\). Being \(\alpha\)
-            in radians, the radius \(r_i\) of the sphere can be calculated as
-            $$
-            r_i = {s_i \over \alpha_i}
-            $$
-        </p>
-        <p>
-            To obtain the center \(c_i\) of the sphere, we must offset \(x_i\) a distance \(r_i\) perpendicular to
-            \(v_i\) on the plane
-            spanning \(v_i\) and \(v_{i+1}\). The normal \(n_i\) to this plane is obtained through
-            $$
-            n_i = {{v_i \times v_{i+1}} \over {|v_i \times v_{i+1}|}}
-            $$
-        </p>
-        <p>
-            from this, the vector \(q_i\) perpendicular to \(v_i\) is simply
-            $$ q_i = n_i \times v_i $$
-        </p>
-        <p>
-            being the center then
-            $$
-            c_i = x_i + r n_i \times v_i.
-            $$
-        </p>
-        <p>
-            Using \(v_i\) and \(q_i\) as an orthogonal pair spanning the plane, the position of the next survey point
-            \(x_{i+1}\) is built as
-            $$
-            x_{i+1} = c_i - r q_i cos (\alpha_i) + r v_i sin (\alpha_i) \label{sphere_survey}\tag{2}
-            $$
-        </p>
-        <p>
-            Similarly, an arbitrary point \(p\) at position \(d\) along the drillhole is found using \(i\) such that
-            \(a_{i+1} > d\). Its angular position \(\theta\) along the great circle is
-            $$ \theta = {{d - a_i} \over r_i} $$
-        </p>
-        <p>
-            This angle can be plugged into equation \(\ref{sphere_survey}\) instead of \(\alpha\) so that we get
-                $$
-                    p = c_i - r q_i cos (\theta) + r v_i sin (\theta) \label{sphere}\tag{3}
-                $$
-        </p>
-        <hr>
-        <sup id="fn1">
-            <p>1. Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
-                for the segment instead of spherical arc, as the numerical precision might blow up and give you bad results.
-            </p>
-            <p>
-                On the subject of angles, you can either use the arccosine of the dot product or the arctangent of the magnitude of
-                the cross product over the dot product. The second method is much more precise for small angles and will allow you to
-                use a closer tolerance before considering that the angle between two survey points is zero. It's costlier in terms
-                of processing, though.
-                <a href="#ref1" title="Jump back to footnote 1 in the text.">&#8617;</a>
-            </p></sup>
-    <h2>References</h2>
-        <ul>
-            <li>
-                <a href="https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">The dark art of drillhole desurveying, from the leapfrog3d blog</a>
-                (<a href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">internet archive</a>)
-            </li>
-            <li><a href="http://home.btconnect.com/SiliconDale/silicon13.htm">Drillhole De-Surveying, from Steve Henley's blog</a>
-                (<a href="https://web.archive.org/web/20190628214612/http://home.btconnect.com/SiliconDale/silicon13.htm">internet archive</a>)
-            </li>
-        </ul>
-    <h2> <a href="https://github.com/endarthur/endarthur.github.io/issues/2">Comments</a></h3>
+          On the subject of angles, you can either use the arccosine of the dot
+          product or the arctangent of the magnitude of the cross product over
+          the dot product. The second method is much more precise for small
+          angles and will allow you to use a closer tolerance before considering
+          that the angle between two survey points is zero. It's costlier in
+          terms of processing, though.
+          <a href="#ref1" title="Jump back to footnote 1 in the text."
+            >&#8617;</a
+          >
+        </p></sup
+      >
+      <h2>References</h2>
+      <ul>
+        <li>
+          <a
+            href="https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/"
+            >The dark art of drillhole desurveying, from the leapfrog3d blog</a
+          >
+          (<a
+            href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/"
+            >internet archive</a
+          >)
+        </li>
+        <li>
+          <a href="http://home.btconnect.com/SiliconDale/silicon13.htm"
+            >Drillhole De-Surveying, from Steve Henley's blog</a
+          >
+          (<a
+            href="https://web.archive.org/web/20190628214612/http://home.btconnect.com/SiliconDale/silicon13.htm"
+            >internet archive</a
+          >)
+        </li>
+      </ul>
+      <h2>
+        <a href="https://github.com/endarthur/endarthur.github.io/issues/2"
+          >Comments</a
+        >
+      </h2>
     </div>
-</body>
+
+    <script>
+      class Desurvey extends THREE.Curve {
+        constructor(
+          survey,
+          collar = null,
+          total_length = null,
+          alpha_tolerance = radians(1.0)
+        ) {
+          super();
+
+          collar = collar ?? new THREE.Vector3();
+          this.survey = survey;
+
+          let survey_length = 0;
+          let points = [collar];
+          let frames = [];
+          let [ai, tri, pgi] = survey[0];
+          let vi = dcos_line(tri, pgi, new THREE.Vector3());
+
+          let xi;
+          for (let i = 0; i < survey.length - 1; i++) {
+            const [ai_, tri_, pgi_] = survey[i + 1];
+            let vi_ = dcos_line(tri_, pgi_, new THREE.Vector3());
+            const alpha = vi.angleTo(vi_);
+            if (alpha > alpha_tolerance) {
+              const r = (ai_ - ai) / alpha;
+              const n = v.crossVectors(vi, vi_).normalize();
+              const q = new THREE.Vector3().crossVectors(n, vi);
+              const c = points[i].clone().addScaledVector(q, r);
+              xi = c
+                .clone()
+                .addScaledVector(q, -r * Math.cos(alpha))
+                .addScaledVector(vi, r * Math.sin(alpha));
+
+              frames.push([ai, r, c, q, vi]);
+            } else {
+              xi = points[i].clone().addScaledVector(vi, ai_ - ai);
+              frames.push([ai, 0, points[i], null, vi]);
+            }
+
+            points.push(xi);
+            survey_length = ai_;
+            [ai, tri, pgi] = [ai_, tri_, pgi_];
+            vi = vi_;
+          }
+
+          frames.push([ai, 0, points[points.length - 1], null, vi]);
+
+          this.total_length = total_length ?? survey_length;
+          this.lengths = frames.map((f) => f[0] / this.total_length);
+          this.frames = frames;
+        }
+
+        getPoint(t, optionalTarget = new THREE.Vector3()) {
+          let i = 0;
+          const n = this.lengths.length - 1;
+          while (t > this.lengths[i + 1] && i < n) {
+            i++;
+          }
+
+          const [ai, ri, ci, qi, vi] = this.frames[i];
+          if (ri > 0) {
+            const theta = (t * this.total_length - ai) / ri;
+            return optionalTarget
+              .copy(ci)
+              .addScaledVector(qi, -ri * Math.cos(theta))
+              .addScaledVector(vi, ri * Math.sin(theta));
+          } else {
+            return optionalTarget
+              .copy(ci)
+              .addScaledVector(vi, t * this.total_length - ai);
+          }
+        }
+      }
+
+      let drillholes = [];
+      function updateDrillHoles() {
+        drillholes.forEach((dh) => {
+          dh.geometry.dispose();
+          dh.material.dispose();
+          scene.remove(dh);
+        });
+        drillholes = [];
+        const dh = {};
+        document.collar
+          .getData()
+          .slice(1)
+          .filter((r) => r.every((c) => c !== ""))
+          .forEach(([bhid, x, y, z, length, color]) => {
+            [x, y, z, length] = [x, z, y, length].map(parseFloat);
+            dh[bhid] = {
+              collar: new THREE.Vector3(x, y, z),
+              length: length,
+              color: color,
+              survey: [],
+            };
+          });
+
+        document.survey
+          .getData()
+          .slice(1)
+          .filter((r) => r.every((c) => c !== "") && r[0] in dh)
+          .forEach(([bhid, ...survey]) => {
+            survey = survey.map(parseFloat);
+            dh[bhid].survey.push(survey);
+          });
+
+        for (const bhid in dh) {
+          const { collar, color, length, survey } = dh[bhid];
+          if (survey.length < 1) continue;
+          survey.sort((s) => s[0]);
+
+          const path = new Desurvey(survey, collar, length);
+          const geometry = new THREE.TubeGeometry(path, 64, 1, 8);
+          const material = new THREE.MeshPhongMaterial({
+            color: color,
+            // specular: 0xffffff,
+            shininess: 10,
+            side: THREE.DoubleSide,
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+          drillholes.push(mesh);
+        }
+      }
+
+      //https://stackoverflow.com/a/45046955/1457481
+      const renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById("three-canvas"),
+        antialias: true,
+      });
+
+      let v = new THREE.Vector3();
+      let v_ = new THREE.Vector3();
+
+      const dcos_line = (tr, pg, v) =>
+        v.setFromSphericalCoords(1.0, radians(90.0 + pg), radians(180.0 - tr));
+
+      const radians = (d) => (d * Math.PI) / 180.0;
+      const degrees = (r) => (r * 180.0) / Math.PI;
+
+      // There's no reason to set the aspect here because we're going
+      // to set it every frame anyway so we'll set it to 2 since 2
+      // is the the aspect for the canvas default size (300w/150h = 2)
+      const camera = new THREE.PerspectiveCamera(70, 2, 1, 1000);
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      camera.position.set(0, 0, 200);
+      controls.update();
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xececec);
+      scene.add(new THREE.GridHelper(1000, 10, 0x888888, 0x444444));
+
+      //   const path = new Desurvey([
+      //     [0.0, 120.0, 80.0],
+      //     [100.0, 180.0, 60.0],
+      //     [200.0, 135.0, 30.0],
+      //   ]);
+      //   const geometry = new THREE.TubeGeometry(path, 64, 1, 8);
+      //   const material = new THREE.MeshPhongMaterial({
+      //     color: 0x555555,
+      //     specular: 0xffffff,
+      //     shininess: 50,
+      //     shading: THREE.SmoothShading,
+      //     side: THREE.DoubleSide,
+      //   });
+      //   const mesh = new THREE.Mesh(geometry, material);
+      //   scene.add(mesh);
+
+      const light1 = new THREE.PointLight(0xffffff, 2, 0);
+      light1.position.set(200, 100, 300);
+      scene.add(light1);
+
+      const ambient_light = new THREE.AmbientLight(0xa0a0a0); // soft white light
+      scene.add(ambient_light);
+
+      function resizeCanvasToDisplaySize() {
+        const canvas = renderer.domElement;
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        if (canvas.width !== width || canvas.height !== height) {
+          // you must pass false here or three.js sadly fights the browser
+          renderer.setSize(width, height, false);
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+
+          // set render target sizes here
+        }
+      }
+
+      function animate(time) {
+        // time *= 0.001; // seconds
+
+        resizeCanvasToDisplaySize();
+
+        controls.update();
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+
+      requestAnimationFrame(animate);
+    </script>
+    <script type="module">
+      import Importabular from "../js/importabular.js";
+
+      class DHEditor extends Importabular {
+        _classNames(x, y) {
+          return super._classNames(x, y) + " " + this.validationClasses(x, y);
+        }
+        validationClasses(x, y) {
+          if (!y) return "header";
+
+          const value = this._getVal(x, y);
+          if (!value) return "";
+          // switch (x) {
+          //   case 0:
+          //     // Name column
+          //     return value.length > 3 ? "ok" : "error";
+          //   case 1:
+          //     // Phone column
+          //     if (!value) return "";
+          //     return checkPhone(value) ? "ok" : "error";
+          //   case 2:
+          //     // Email column
+          //     if (!value) return "";
+          //     return checkEmail(value) ? "ok" : "error";
+          // }
+          return "";
+        }
+        _startEditing({ x, y }) {
+          this._editing = { x, y };
+          const td = this._getCell(x, y);
+
+          // Measure the current content
+          const tdSize = td.getBoundingClientRect();
+          const cellSize = td.firstChild.getBoundingClientRect();
+
+          // remove the current content
+          td.removeChild(td.firstChild);
+
+          // add the input
+          let input;
+          const current_selected = this._getVal(x, y);
+          const header = this._getVal(x, 0).toLowerCase();
+          switch (header) {
+            case "x":
+            case "y":
+            case "z":
+            case "length":
+            case "at":
+            case "bearing":
+            case "dip":
+              input = document.createElement("input");
+              input.type = "number";
+              input.value = current_selected;
+              break;
+            case "color":
+              input = document.createElement("input");
+              input.type = "color";
+              input.value = current_selected;
+              break;
+            default:
+              input = document.createElement("input");
+              input.type = "text";
+              input.value = current_selected;
+              break;
+          }
+
+          td.appendChild(input);
+
+          // Make the new content fit the past size
+          Object.assign(td.style, {
+            width: tdSize.width - 2,
+            height: tdSize.height,
+          });
+
+          Object.assign(input.style, {
+            width: `${cellSize.width}px`,
+            height: `${cellSize.height}px`,
+          });
+
+          input.focus();
+          input.addEventListener("blur", this._stopEditing);
+          input.addEventListener("keydown", this._blurIfEnter);
+        }
+        _setVal(x, y, val) {
+          // Prevent header editing after the initial loading
+          if (!y && this._getVal(x, y)) return;
+
+          //   // Auto capitalize names
+          //   // if (x === 0) val = capitalize(val);
+
+          //   // Auto lowercase email
+          //   if (x < 3 && val && y) {
+          //     const vf = parseFloat(val);
+          //     const [sa, cl, si] = [0, 1, 2].map(x_ => this._getVal(x_, y));
+          //     switch (header) {
+          //       case 0:
+          //         if (cl) super._setVal(2, y, 100.0 - vf - parseFloat(cl));
+          //         if (si) super._setVal(1, y, 100.0 - vf - parseFloat(si));
+          //         break;
+          //       case 1:
+          //         if (sa) super._setVal(2, y, 100.0 - vf - parseFloat(sa));
+          //         if (cl) super._setVal(0, y, 100.0 - vf - parseFloat(cl));
+          //         break;
+          //       case 2:
+          //         if (sa) super._setVal(1, y, 100.0 - vf - parseFloat(sa));
+          //         if (cl) super._setVal(0, y, 100.0 - vf - parseFloat(cl));
+          //         break;
+          //     }
+          //   }
+
+          return super._setVal(x, y, val);
+        }
+      }
+
+      const css = `
+              table{
+              font-size:medium;
+              margin:auto;
+              width:100%;
+              }
+              td>*{
+                  min-width: 60px;
+              }
+            `;
+
+      function loadData() {
+        const params = new URLSearchParams(location.search);
+        const collar = JSON.parse(params.get("collar")) ?? [
+          ["bhid", "x", "y", "z", "length", "color"],
+          ["DH01", "0", "-40", "0", "120", "#1f77b4"],
+          ["DH02", "20", "-20", "0", "100", "#2ca02c"],
+          ["DH03", "10", "30", "0", "90", "#1f77b4"],
+          ["DH04", "0", "50", "0", "140", "#2ca02c"],
+        ];
+        const survey = JSON.parse(params.get("survey")) ?? [
+          ["bhid", "at", "bearing", "dip"],
+          ["DH01", "0", "120", "60"],
+          ["DH01", "70", "130", "45"],
+          ["DH01", "100", "160", "30"],
+          ["DH02", "0", "120", "60"],
+          ["DH02", "30", "120", "45"],
+          ["DH02", "100", "130", "30"],
+          ["DH03", "0", "120", "60"],
+          ["DH03", "100", "160", "30"],
+          ["DH04", "0", "120", "75"],
+          ["DH04", "30", "130", "65"],
+          ["DH04", "70", "130", "45"],
+          ["DH04", "100", "160", "30"],
+        ];
+        if (collar !== null) {
+          document.collar.setData(collar);
+        }
+        if (survey !== null) {
+          document.survey.setData(survey);
+        }
+      }
+
+      document.collar = new DHEditor({
+        data: [["bhid", "x", "y", "z", "length", "color"]],
+        node: document.getElementById("collar"),
+        minCols: 6,
+        maxCols: 6,
+        css: css,
+        onChange: (data) => {
+          updateDrillHoles();
+          let url = new URL(location.href);
+          url.search = `?${new URLSearchParams({
+            collar: JSON.stringify(data),
+            survey: JSON.stringify(document.survey.getData()),
+          }).toString()}`;
+          history.pushState(null, "", url.href);
+        },
+      });
+      document.survey = new DHEditor({
+        data: [["bhid", "at", "bearing", "dip"]],
+        node: document.getElementById("survey"),
+        minCols: 4,
+        maxCols: 4,
+        css: css,
+        onChange: (data) => {
+          updateDrillHoles();
+          let url = new URL(location.href);
+          url.search = `?${new URLSearchParams({
+            collar: JSON.stringify(document.collar.getData()),
+            survey: JSON.stringify(data),
+          }).toString()}`;
+          history.pushState(null, "", url.href);
+        },
+      });
+
+      loadData();
+      updateDrillHoles();
+    </script>
+  </body>
 </html>
