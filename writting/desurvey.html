@@ -11,6 +11,8 @@
     ></script>
     <script src="../js/three/three.js"></script>
     <script src="../js/three/OrbitControls.js"></script>
+    <script src="../js/lz-string.js"></script>
+    <script src="../js/desurvey.js"></script>
     <style>
       .content {
         max-width: 960px;
@@ -24,16 +26,28 @@
 
       #data-entry {
         display: grid;
+        max-height: 80vh;
         grid-template-columns: 1.2fr 1fr;
         grid-column-gap: 30px;
+        grid-template-areas:
+          "collar survey"
+          "options lith";
       }
-      /* #collar {
-          margin-right: auto;
+      #collar {
+        grid-area: collar;
       }
 
       #survey {
-          margin-left: auto;
-      } */
+        grid-area: survey;
+      }
+
+      #lith {
+        grid-area: lith;
+      }
+
+      #options {
+        grid-area: options;
+      }
     </style>
   </head>
 
@@ -135,8 +149,18 @@
       <h2><a href="#interactive-tool">Interactive Example</a></h2>
       <canvas id="three-canvas"></canvas>
       <div id="data-entry">
-        <div id="collar"></div>
-        <div id="survey"></div>
+        <details id="collar" open>
+          <summary>Collar</summary>
+        </details>
+        <details id="survey" open>
+          <summary>Survey</summary>
+        </details>
+        <details id="lith" open>
+          <summary>Lith</summary>
+        </details>
+        <details id="options" open>
+          <summary>Options</summary>
+        </details>
       </div>
 
       <hr />
@@ -189,100 +213,34 @@
     </div>
 
     <script>
-      class Desurvey extends THREE.Curve {
-        constructor(
-          survey,
-          collar = null,
-          total_length = null,
-          alpha_tolerance = radians(1.0)
-        ) {
-          super();
-
-          collar = collar ?? new THREE.Vector3();
-          this.survey = survey;
-
-          let survey_length = 0;
-          let points = [collar];
-          let frames = [];
-          let [ai, tri, pgi] = survey[0];
-          let vi = dcos_line(tri, pgi, new THREE.Vector3());
-
-          let xi;
-          for (let i = 0; i < survey.length - 1; i++) {
-            const [ai_, tri_, pgi_] = survey[i + 1];
-            let vi_ = dcos_line(tri_, pgi_, new THREE.Vector3());
-            const alpha = vi.angleTo(vi_);
-            if (alpha > alpha_tolerance) {
-              const r = (ai_ - ai) / alpha;
-              const n = v.crossVectors(vi, vi_).normalize();
-              const q = new THREE.Vector3().crossVectors(n, vi);
-              const c = points[i].clone().addScaledVector(q, r);
-              xi = c
-                .clone()
-                .addScaledVector(q, -r * Math.cos(alpha))
-                .addScaledVector(vi, r * Math.sin(alpha));
-
-              frames.push([ai, r, c, q, vi]);
-            } else {
-              xi = points[i].clone().addScaledVector(vi, ai_ - ai);
-              frames.push([ai, 0, points[i], null, vi]);
-            }
-
-            points.push(xi);
-            survey_length = ai_;
-            [ai, tri, pgi] = [ai_, tri_, pgi_];
-            vi = vi_;
-          }
-
-          frames.push([ai, 0, points[points.length - 1], null, vi]);
-
-          this.total_length = total_length ?? survey_length;
-          this.lengths = frames.map((f) => f[0] / this.total_length);
-          this.frames = frames;
-        }
-
-        getPoint(t, optionalTarget = new THREE.Vector3()) {
-          let i = 0;
-          const n = this.lengths.length - 1;
-          while (t > this.lengths[i + 1] && i < n) {
-            i++;
-          }
-
-          const [ai, ri, ci, qi, vi] = this.frames[i];
-          if (ri > 0) {
-            const theta = (t * this.total_length - ai) / ri;
-            return optionalTarget
-              .copy(ci)
-              .addScaledVector(qi, -ri * Math.cos(theta))
-              .addScaledVector(vi, ri * Math.sin(theta));
-          } else {
-            return optionalTarget
-              .copy(ci)
-              .addScaledVector(vi, t * this.total_length - ai);
-          }
-        }
-      }
-
       let drillholes = [];
+      let dh_group = null;
+      let segments_group = null;
+      const bbox = new THREE.Box3();
       function updateDrillHoles() {
         drillholes.forEach((dh) => {
           dh.geometry.dispose();
           dh.material.dispose();
           scene.remove(dh);
         });
+        scene.remove(dh_group);
+        scene.remove(segments_group);
+        dh_group = new THREE.Group();
+        segments_group = new THREE.Group();
         drillholes = [];
         const dh = {};
         document.collar
           .getData()
           .slice(1)
           .filter((r) => r.every((c) => c !== ""))
-          .forEach(([bhid, x, y, z, length, color]) => {
+          .forEach(([bhid, x, y, z, length]) => {
             [x, y, z, length] = [x, z, y, length].map(parseFloat);
             dh[bhid] = {
               collar: new THREE.Vector3(x, y, z),
               length: length,
-              color: color,
+              //   color: color,
               survey: [],
+              intervals: [],
             };
           });
 
@@ -295,23 +253,60 @@
             dh[bhid].survey.push(survey);
           });
 
+        document.lith
+          .getData()
+          .slice(1)
+          .filter((r) => r.every((c) => c !== "") && r[0] in dh)
+          .forEach(([bhid, from, to, lith]) => {
+            [from, to] = [from, to].map(parseFloat);
+            dh[bhid].intervals.push([from, to, lith]);
+          });
+
+        const opts = document.opts.getData();
+        const trace_color = opts[1][1];
+        const offset = new THREE.Vector3(...opts[0].slice(1).map(parseFloat));
+        const lith_colors = {};
+        opts.slice(3).forEach(([lith, color, ..._]) => {
+            lith_colors[lith] = color;
+        });
+
         for (const bhid in dh) {
-          const { collar, color, length, survey } = dh[bhid];
+          const { collar, length, survey, intervals } = dh[bhid];
           if (survey.length < 1) continue;
           survey.sort((s) => s[0]);
 
-          const path = new Desurvey(survey, collar, length);
+          const path = new Drillhole(survey, collar, length);
           const geometry = new THREE.TubeGeometry(path, 64, 1, 8);
           const material = new THREE.MeshPhongMaterial({
-            color: color,
+            color: trace_color,
             // specular: 0xffffff,
             shininess: 10,
             side: THREE.DoubleSide,
           });
           const mesh = new THREE.Mesh(geometry, material);
-          scene.add(mesh);
+          dh_group.add(mesh);
           drillholes.push(mesh);
+
+          for (const [from, to, lith] of intervals) {
+              const lpath = path.getSegment(from, to);
+              const lgeometry = new THREE.TubeGeometry(lpath, 64, 2, 8);
+              const lmaterial = new THREE.MeshPhongMaterial({
+            color: lith_colors[lith] ?? "#ff0000",
+            // specular: 0xffffff,
+            shininess: 10,
+            side: THREE.DoubleSide,
+          });
+          const lmesh = new THREE.Mesh(lgeometry, lmaterial);
+          segments_group.add(lmesh);
+          }
         }
+        // bbox.setFromObject(dh_group);
+        // const center = bbox.getCenter(new THREE.Vector3());
+        // dh_group.position.set(-center.x, -center.y, -center.z);
+        dh_group.position.copy(offset);
+        segments_group.position.copy(offset);
+        scene.add(dh_group);
+        scene.add(segments_group);
       }
 
       //https://stackoverflow.com/a/45046955/1457481
@@ -319,9 +314,6 @@
         canvas: document.getElementById("three-canvas"),
         antialias: true,
       });
-
-      let v = new THREE.Vector3();
-      let v_ = new THREE.Vector3();
 
       const dcos_line = (tr, pg, v) =>
         v.setFromSphericalCoords(1.0, radians(90.0 + pg), radians(180.0 - tr));
@@ -332,7 +324,7 @@
       // There's no reason to set the aspect here because we're going
       // to set it every frame anyway so we'll set it to 2 since 2
       // is the the aspect for the canvas default size (300w/150h = 2)
-      const camera = new THREE.PerspectiveCamera(70, 2, 1, 1000);
+      const camera = new THREE.PerspectiveCamera(70, 2, 1, 1e9);
       const controls = new THREE.OrbitControls(camera, renderer.domElement);
       camera.position.set(0, 0, 200);
       controls.update();
@@ -340,22 +332,6 @@
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0xececec);
       scene.add(new THREE.GridHelper(1000, 10, 0x888888, 0x444444));
-
-      //   const path = new Desurvey([
-      //     [0.0, 120.0, 80.0],
-      //     [100.0, 180.0, 60.0],
-      //     [200.0, 135.0, 30.0],
-      //   ]);
-      //   const geometry = new THREE.TubeGeometry(path, 64, 1, 8);
-      //   const material = new THREE.MeshPhongMaterial({
-      //     color: 0x555555,
-      //     specular: 0xffffff,
-      //     shininess: 50,
-      //     shading: THREE.SmoothShading,
-      //     side: THREE.DoubleSide,
-      //   });
-      //   const mesh = new THREE.Mesh(geometry, material);
-      //   scene.add(mesh);
 
       const light1 = new THREE.PointLight(0xffffff, 2, 0);
       light1.position.set(200, 100, 300);
@@ -439,6 +415,8 @@
             case "z":
             case "length":
             case "at":
+            case "from":
+            case "to":
             case "bearing":
             case "dip":
               input = document.createElement("input");
@@ -477,30 +455,101 @@
         _setVal(x, y, val) {
           // Prevent header editing after the initial loading
           if (!y && this._getVal(x, y)) return;
+          return super._setVal(x, y, val);
+        }
+      }
 
-          //   // Auto capitalize names
-          //   // if (x === 0) val = capitalize(val);
+      class OptionsEditor extends Importabular {
+        _classNames(x, y) {
+          return super._classNames(x, y) + " " + this.validationClasses(x, y);
+        }
+        validationClasses(x, y) {
+          if (y === 2 || (y < 2 && !x)) return "header";
 
-          //   // Auto lowercase email
-          //   if (x < 3 && val && y) {
-          //     const vf = parseFloat(val);
-          //     const [sa, cl, si] = [0, 1, 2].map(x_ => this._getVal(x_, y));
-          //     switch (header) {
-          //       case 0:
-          //         if (cl) super._setVal(2, y, 100.0 - vf - parseFloat(cl));
-          //         if (si) super._setVal(1, y, 100.0 - vf - parseFloat(si));
-          //         break;
-          //       case 1:
-          //         if (sa) super._setVal(2, y, 100.0 - vf - parseFloat(sa));
-          //         if (cl) super._setVal(0, y, 100.0 - vf - parseFloat(cl));
-          //         break;
-          //       case 2:
-          //         if (sa) super._setVal(1, y, 100.0 - vf - parseFloat(sa));
-          //         if (cl) super._setVal(0, y, 100.0 - vf - parseFloat(cl));
-          //         break;
-          //     }
-          //   }
+          const value = this._getVal(x, y);
+          if (!value) return "";
+          // switch (x) {
+          //   case 0:
+          //     // Name column
+          //     return value.length > 3 ? "ok" : "error";
+          //   case 1:
+          //     // Phone column
+          //     if (!value) return "";
+          //     return checkPhone(value) ? "ok" : "error";
+          //   case 2:
+          //     // Email column
+          //     if (!value) return "";
+          //     return checkEmail(value) ? "ok" : "error";
+          // }
+          return "";
+        }
+        _startEditing({ x, y }) {
+          if (y === 2 || (y < 2 && !x)) return;
+          this._editing = { x, y };
+          const td = this._getCell(x, y);
 
+          // Measure the current content
+          const tdSize = td.getBoundingClientRect();
+          const cellSize = td.firstChild.getBoundingClientRect();
+
+          // remove the current content
+          td.removeChild(td.firstChild);
+
+          // add the input
+          let input;
+          const current_selected = this._getVal(x, y);
+          const header =
+            y < 3
+              ? this._getVal(0, y).toLowerCase()
+              : this._getVal(x, 2).toLowerCase();
+          switch (header) {
+            case "x":
+            case "y":
+            case "z":
+            case "length":
+            case "at":
+            case "from":
+            case "to":
+            case "bearing":
+            case "dip":
+            case "offset":
+              input = document.createElement("input");
+              input.type = "number";
+              input.value = current_selected;
+              break;
+            case "color":
+            case "trace color":
+              input = document.createElement("input");
+              input.type = "color";
+              input.value = current_selected;
+              break;
+            default:
+              input = document.createElement("input");
+              input.type = "text";
+              input.value = current_selected;
+              break;
+          }
+
+          td.appendChild(input);
+
+          // Make the new content fit the past size
+          Object.assign(td.style, {
+            width: tdSize.width - 2,
+            height: tdSize.height,
+          });
+
+          Object.assign(input.style, {
+            width: `${cellSize.width}px`,
+            height: `${cellSize.height}px`,
+          });
+
+          input.focus();
+          input.addEventListener("blur", this._stopEditing);
+          input.addEventListener("keydown", this._blurIfEnter);
+        }
+        _setVal(x, y, val) {
+          // Prevent header editing after the initial loading
+          if (!y && this._getVal(x, y)) return;
           return super._setVal(x, y, val);
         }
       }
@@ -512,20 +561,36 @@
               width:100%;
               }
               td>*{
-                  min-width: 60px;
+                  min-width: 4em;
+              }
+              td.header{
+                  font-weight:bold;
               }
             `;
 
       function loadData() {
         const params = new URLSearchParams(location.search);
-        const collar = JSON.parse(params.get("collar")) ?? [
-          ["bhid", "x", "y", "z", "length", "color"],
-          ["DH01", "0", "-40", "0", "120", "#1f77b4"],
-          ["DH02", "20", "-20", "0", "100", "#2ca02c"],
-          ["DH03", "10", "30", "0", "90", "#1f77b4"],
-          ["DH04", "0", "50", "0", "140", "#2ca02c"],
+        let collar, survey, lith, options;
+        if (!params.has("data")) {
+          collar = JSON.parse(params.get("collar"));
+          survey = JSON.parse(params.get("survey"));
+        } else {
+          const data = JSON.parse(
+            LZString.decompressFromEncodedURIComponent(params.get("data"))
+          );
+          collar = data["collar"];
+          survey = data["survey"];
+          lith = data["lith"];
+          options = data["options"];
+        }
+        collar = collar ?? [
+          ["bhid", "x", "y", "z", "length"],
+          ["DH01", "0", "-40", "0", "120"],
+          ["DH02", "20", "-20", "0", "100"],
+          ["DH03", "10", "30", "0", "90"],
+          ["DH04", "0", "50", "0", "140"],
         ];
-        const survey = JSON.parse(params.get("survey")) ?? [
+        survey = survey ?? [
           ["bhid", "at", "bearing", "dip"],
           ["DH01", "0", "120", "60"],
           ["DH01", "70", "130", "45"],
@@ -540,29 +605,36 @@
           ["DH04", "70", "130", "45"],
           ["DH04", "100", "160", "30"],
         ];
-        if (collar !== null) {
-          document.collar.setData(collar);
-        }
-        if (survey !== null) {
-          document.survey.setData(survey);
-        }
+        lith = lith ?? [
+        ["DH01", "0", "20", "A"],
+        ["DH01", "60", "90", "B"],
+        ["DH02", "0", "10", "A"],
+        ["DH02", "50", "80", "B"],
+        ["DH03", "10", "20", "A"],
+        ["DH03", "40", "60", "B"],
+        ["DH04", "30", "50", "B"],
+        ];
+        options = options ?? [
+          ["offset", "0.0", "0.0", "0.0"],
+          ["trace color", "#708090", "", ""],
+          ["lith", "color", "", ""],
+          ["A", "#00ff00", "", ""],
+          ["B", "#0000ff", "", ""]
+        ]
+        document.collar.setData(collar);
+        document.survey.setData(survey);
+        document.lith.setData(lith);
+        document.opts.setData(options);
       }
 
       document.collar = new DHEditor({
-        data: [["bhid", "x", "y", "z", "length", "color"]],
+        data: [["bhid", "x", "y", "z", "length"]],
         node: document.getElementById("collar"),
-        minCols: 6,
-        maxCols: 6,
+        minCols: 5,
+        maxCols: 5,
         css: css,
-        onChange: (data) => {
-          updateDrillHoles();
-          let url = new URL(location.href);
-          url.search = `?${new URLSearchParams({
-            collar: JSON.stringify(data),
-            survey: JSON.stringify(document.survey.getData()),
-          }).toString()}`;
-          history.pushState(null, "", url.href);
-        },
+        height: "30vh",
+        onChange: updateURL,
       });
       document.survey = new DHEditor({
         data: [["bhid", "at", "bearing", "dip"]],
@@ -570,16 +642,49 @@
         minCols: 4,
         maxCols: 4,
         css: css,
-        onChange: (data) => {
-          updateDrillHoles();
-          let url = new URL(location.href);
-          url.search = `?${new URLSearchParams({
-            collar: JSON.stringify(document.collar.getData()),
-            survey: JSON.stringify(data),
-          }).toString()}`;
-          history.pushState(null, "", url.href);
-        },
+        height: "30vh",
+        onChange: updateURL,
       });
+      document.lith = new DHEditor({
+        data: [["bhid", "from", "to", "lith"]],
+        node: document.getElementById("lith"),
+        minCols: 4,
+        maxCols: 4,
+        css: css,
+        height: "30vh",
+        onChange: updateURL,
+      });
+      document.opts = new OptionsEditor({
+        data: [
+          ["offset", "0.0", "0.0", "0.0"],
+          ["trace color", "#708090", "", ""],
+          ["lith", "color", "", ""],
+        ],
+        node: document.getElementById("options"),
+        minCols: 4,
+        maxCols: 4,
+        css: css,
+        height: "30vh",
+        onChange: updateURL,
+      });
+
+      function updateURL() {
+        updateDrillHoles();
+        let url = new URL(location.href);
+        url.search = `?${new URLSearchParams({
+          data: compressData({
+            collar: document.collar.getData(),
+            survey: document.survey.getData(),
+            lith: document.lith.getData(),
+            opts: document.opts.getData(),
+          }),
+        }).toString()}`;
+        history.pushState(null, "", url.href);
+      }
+
+      function compressData(data) {
+        return LZString.compressToEncodedURIComponent(JSON.stringify(data));
+      }
 
       loadData();
       updateDrillHoles();
