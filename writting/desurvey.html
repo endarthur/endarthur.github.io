@@ -216,6 +216,31 @@
       let drillholes = [];
       let dh_group = null;
       let segments_group = null;
+
+      const state = {
+        dh: {},
+        liths: {},
+      };
+
+      function isEmpty(obj) {
+        for (var i in obj) return false;
+        return true;
+      }
+
+      const trace_material = new THREE.MeshPhongMaterial({
+        color: "#708090",
+        // specular: 0xffffff,
+        shininess: 10,
+        side: THREE.DoubleSide,
+      });
+
+      const default_lith = new THREE.MeshPhongMaterial({
+        color: "#ff0000",
+        // specular: 0xffffff,
+        shininess: 10,
+        side: THREE.DoubleSide,
+      });
+
       const bbox = new THREE.Box3();
       function updateDrillHoles() {
         drillholes.forEach((dh) => {
@@ -229,6 +254,17 @@
         segments_group = new THREE.Group();
         drillholes = [];
         const dh = {};
+
+        const opts = document.opts.getData();
+
+        const trace_color = opts[1][1];
+        trace_material.color = new THREE.Color(trace_color);
+
+        const [ox, oz, oy] = opts[0]
+          .slice(1)
+          .map((v) => parseFloat(v.replace(",", ".")));
+        const offset = new THREE.Vector3(ox, oy, oz);
+
         document.collar
           .getData()
           .slice(1)
@@ -237,12 +273,18 @@
             [x, y, z, length] = [x, z, y, length].map((v) =>
               parseFloat(v.replace(",", "."))
             );
+            const collar = new THREE.Vector3(x, y, z).add(offset);
             dh[bhid] = {
-              collar: new THREE.Vector3(x, y, z),
+              collar: collar,
               length: length,
               //   color: color,
               survey: [],
               intervals: [],
+              desurvey: null,
+              trace_mesh: null,
+              interval_meshes: {},
+              survey_str: null,
+              interval_str: null,
             };
           });
 
@@ -255,6 +297,7 @@
             dh[bhid].survey.push(survey);
           });
 
+        const liths = {};
         document.lith
           .getData()
           .slice(1)
@@ -262,70 +305,132 @@
           .forEach(([bhid, from, to, lith]) => {
             [from, to] = [from, to].map((v) => parseFloat(v.replace(",", ".")));
             dh[bhid].intervals.push([from, to, lith]);
+            if (!(lith in liths)) {
+              liths[lith] = null;
+            }
           });
 
-        const opts = document.opts.getData();
-
-        const trace_color = opts[1][1];
-        const trace_material = new THREE.MeshPhongMaterial({
-          color: trace_color,
-          // specular: 0xffffff,
-          shininess: 10,
-          side: THREE.DoubleSide,
-        });
-
-        const default_lith = new THREE.MeshPhongMaterial({
-          color: "#ff0000",
-          // specular: 0xffffff,
-          shininess: 10,
-          side: THREE.DoubleSide,
-        });
-
-        const lith_materials = {};
         opts.slice(3).forEach(([lith, color, ..._]) => {
-          lith_materials[lith] = new THREE.MeshPhongMaterial({
-            color: color,
-            // specular: 0xffffff,
-            shininess: 10,
-            side: THREE.DoubleSide,
-          });
+          if (lith in state.liths && state.liths[lith] !== null) {
+            liths[lith] = state.liths[lith];
+            liths[lith].color = new THREE.Color(color);
+          } else {
+            liths[lith] = new THREE.MeshPhongMaterial({
+              color: new THREE.Color(color),
+              // specular: 0xffffff,
+              shininess: 10,
+              side: THREE.DoubleSide,
+            });
+          }
         });
 
-        const [ox, oz, oy] = opts[0]
-          .slice(1)
-          .map((v) => parseFloat(v.replace(",", ".")));
-        const offset = new THREE.Vector3(ox, oy, oz);
+        for (const lith in state.liths) {
+          if (!(lith in liths)) {
+            state.liths[lith].dispose();
+          }
+        }
+
+        state.liths = liths;
+
+        for (const d in dh) {
+            const dh_current = dh[d];
+            dh_current.survey_str = JSON.stringify(dh_current.survey);
+            dh_current.intervals_str = JSON.stringify(dh_current.intervals);
+        }
+
+        for (const d in state.dh) {
+          const dh_prev = state.dh[d];
+          if (d in dh) {
+            const dh_current = dh[d];
+            const desurveyNeedsUpdate = !(
+              dh_prev.collar.equals(dh_current.collar) &&
+              dh_prev.survey_str == dh_current.survey_str
+            );
+            if (desurveyNeedsUpdate) {
+              dh_prev.trace_mesh.geometry.dispose();
+              scene.remove(dh_prev.trace_mesh);
+            } else {
+              dh_current.trace_mesh = dh_prev.trace_mesh;
+              dh_current.desurvey = dh_prev.desurvey;
+            }
+            const intervalsNeedsUpdate =
+              desurveyNeedsUpdate ||
+              dh_prev.intervals_str != dh_current.intervals_str;
+            if (intervalsNeedsUpdate) {
+              Object.entries(dh_prev.interval_meshes).forEach(([l, m]) => {
+                m.geometry.dispose();
+                scene.remove(m);
+              });
+            } else {
+              dh_current.interval_meshes = dh_prev.interval_meshes;
+            }
+          } else {
+            dh_prev.trace_mesh.geometry.dispose();
+            scene.remove(dh_prev.trace_mesh);
+            Object.entries(dh_prev.interval_meshes).forEach(([l, m]) => {
+              m.geometry.dispose();
+              scene.remove(m);
+            });
+          }
+        }
+
+        state.dh = dh;
 
         for (const bhid in dh) {
           const { collar, length, survey, intervals } = dh[bhid];
           if (survey.length < 1) continue;
           survey.sort((s) => s[0]);
 
-          const path = new Drillhole(survey, collar, length);
-          const geometry = new THREE.TubeGeometry(path, 64, 1, 8);
+          // desurvey, trace_mesh, interval_meshes
 
-          const mesh = new THREE.Mesh(geometry, trace_material);
-          dh_group.add(mesh);
-          drillholes.push(mesh);
+          let path;
+          if (dh[bhid].desurvey === null) {
+            path = new Drillhole(survey, collar, length);
+            const geometry = new THREE.TubeBufferGeometry(
+              path,
+              Math.max(Math.ceil(path.total_length / 2), 2),
+              1,
+              8
+            );
+            const mesh = new THREE.Mesh(geometry, trace_material);
+            scene.add(mesh);
+            dh[bhid].desurvey = path;
+            dh[bhid].trace_mesh = mesh;
+          } else {
+            path = dh[bhid].desurvey;
+          }
 
+          if (!isEmpty(dh[bhid].interval_meshes)) {
+            for (const lith in dh[bhid].interval_meshes) {
+              dh[bhid].interval_meshes[lith].material =
+                liths[lith] ?? default_lith;
+            }
+            continue;
+          }
           for (const [from, to, lith] of intervals) {
             const lpath = path.getSegment(from, to);
-            const lgeometry = new THREE.TubeGeometry(lpath, 64, 2, 8);
-            const lmesh = new THREE.Mesh(
-              lgeometry,
-              lith_materials[lith] ?? default_lith
+            const lgeometry = new THREE.TubeGeometry(
+              lpath,
+              Math.max(Math.ceil(lpath.dl / 2), 2),
+              2,
+              8
             );
-            segments_group.add(lmesh);
-            drillholes.push(lmesh);
+            if (lith in dh[bhid].interval_meshes) {
+              dh[bhid].interval_meshes[lith].merge(lgeometry);
+            } else {
+              dh[bhid].interval_meshes[lith] = lgeometry;
+            }
+          }
+
+          for (const lith in dh[bhid].interval_meshes) {
+            const geometry = new THREE.BufferGeometry().fromGeometry(
+              dh[bhid].interval_meshes[lith]
+            );
+            const mesh = new THREE.Mesh(geometry, liths[lith] ?? default_lith);
+            scene.add(mesh);
+            dh[bhid].interval_meshes[lith] = mesh;
           }
         }
-        // bbox.setFromObject(dh_group);
-        // const center = bbox.getCenter(new THREE.Vector3());
-        // dh_group.position.set(-center.x, -center.y, -center.z);
-        dh_group.position.copy(offset);
-        segments_group.position.copy(offset);
-        scene.add(dh_group);
-        scene.add(segments_group);
       }
 
       //https://stackoverflow.com/a/45046955/1457481
