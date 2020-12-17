@@ -273,7 +273,7 @@
             [x, y, z, length] = [x, z, y, length].map((v) =>
               parseFloat(v.replace(",", "."))
             );
-            const collar = new THREE.Vector3(x, y, z).add(offset);
+            const collar = new THREE.Vector3(x, y, z).sub(offset);
             dh[bhid] = {
               collar: collar,
               length: length,
