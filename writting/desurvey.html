@@ -11,6 +11,7 @@
     ></script>
     <script src="../js/three/three.js"></script>
     <script src="../js/three/OrbitControls.js"></script>
+    <script src="../js/three/GLTFExporter.js"></script>
     <script src="../js/lz-string.js"></script>
     <script src="../js/desurvey.js"></script>
     <style>
@@ -162,6 +163,7 @@
           <summary>Options</summary>
         </details>
       </div>
+      <button id="dlmodel">download model</button>
 
       <hr />
       <sup id="fn1">
@@ -213,9 +215,43 @@
     </div>
 
     <script>
-      let drillholes = [];
-      let dh_group = null;
-      let segments_group = null;
+      // https://github.com/mrdoob/three.js/blob/master/examples/misc_exporter_gltf.html
+      function exportGLTF(input) {
+        const gltfExporter = new THREE.GLTFExporter();
+
+        gltfExporter.parse(
+          input,
+          function (result) {
+            saveArrayBuffer(result, "desurvey.glb");
+          },
+          { binary: true }
+        );
+      }
+
+      const link = document.createElement("a");
+      link.style.display = "none";
+      document.body.appendChild(link); // Firefox workaround, see #6594
+
+      function save(blob, filename) {
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+
+        // URL.revokeObjectURL( url ); breaks Firefox...
+      }
+
+      function saveArrayBuffer(buffer, filename) {
+        save(
+          new Blob([buffer], { type: "application/octet-stream" }),
+          filename
+        );
+      }
+
+      document.getElementById("dlmodel").addEventListener("click", (e) => {
+        exportGLTF(dh_group);
+      });
+
+      let dh_group = new THREE.Group();
 
       const state = {
         dh: {},
@@ -243,16 +279,6 @@
 
       const bbox = new THREE.Box3();
       function updateDrillHoles() {
-        drillholes.forEach((dh) => {
-          dh.geometry.dispose();
-          dh.material.dispose();
-          scene.remove(dh);
-        });
-        scene.remove(dh_group);
-        scene.remove(segments_group);
-        dh_group = new THREE.Group();
-        segments_group = new THREE.Group();
-        drillholes = [];
         const dh = {};
 
         const opts = document.opts.getData();
@@ -333,9 +359,9 @@
         state.liths = liths;
 
         for (const d in dh) {
-            const dh_current = dh[d];
-            dh_current.survey_str = JSON.stringify(dh_current.survey);
-            dh_current.intervals_str = JSON.stringify(dh_current.intervals);
+          const dh_current = dh[d];
+          dh_current.survey_str = JSON.stringify(dh_current.survey);
+          dh_current.intervals_str = JSON.stringify(dh_current.intervals);
         }
 
         for (const d in state.dh) {
@@ -347,11 +373,10 @@
               dh_prev.survey_str == dh_current.survey_str
             );
             if (desurveyNeedsUpdate) {
-                if (dh_prev.trace_mesh != null) {
-                    dh_prev.trace_mesh.geometry.dispose();
-                    scene.remove(dh_prev.trace_mesh);
-                }
-
+              if (dh_prev.trace_mesh != null) {
+                dh_prev.trace_mesh.geometry.dispose();
+                dh_group.remove(dh_prev.trace_mesh);
+              }
             } else {
               dh_current.trace_mesh = dh_prev.trace_mesh;
               dh_current.desurvey = dh_prev.desurvey;
@@ -362,17 +387,17 @@
             if (intervalsNeedsUpdate) {
               Object.entries(dh_prev.interval_meshes).forEach(([l, m]) => {
                 m.geometry.dispose();
-                scene.remove(m);
+                dh_group.remove(m);
               });
             } else {
               dh_current.interval_meshes = dh_prev.interval_meshes;
             }
           } else {
             dh_prev.trace_mesh.geometry.dispose();
-            scene.remove(dh_prev.trace_mesh);
+            dh_group.remove(dh_prev.trace_mesh);
             Object.entries(dh_prev.interval_meshes).forEach(([l, m]) => {
               m.geometry.dispose();
-              scene.remove(m);
+              dh_group.remove(m);
             });
           }
         }
@@ -396,7 +421,7 @@
               8
             );
             const mesh = new THREE.Mesh(geometry, trace_material);
-            scene.add(mesh);
+            dh_group.add(mesh);
             dh[bhid].desurvey = path;
             dh[bhid].trace_mesh = mesh;
           } else {
@@ -430,7 +455,7 @@
               dh[bhid].interval_meshes[lith]
             );
             const mesh = new THREE.Mesh(geometry, liths[lith] ?? default_lith);
-            scene.add(mesh);
+            dh_group.add(mesh);
             dh[bhid].interval_meshes[lith] = mesh;
           }
         }
@@ -459,6 +484,7 @@
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0xececec);
       scene.add(new THREE.GridHelper(1000, 10, 0x888888, 0x444444));
+      scene.add(dh_group);
 
       const light1 = new THREE.PointLight(0xffffff, 2, 0);
       light1.position.set(200, 100, 300);
