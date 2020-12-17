@@ -347,8 +347,11 @@
               dh_prev.survey_str == dh_current.survey_str
             );
             if (desurveyNeedsUpdate) {
-              dh_prev.trace_mesh.geometry.dispose();
-              scene.remove(dh_prev.trace_mesh);
+                if (dh_prev.trace_mesh != null) {
+                    dh_prev.trace_mesh.geometry.dispose();
+                    scene.remove(dh_prev.trace_mesh);
+                }
+
             } else {
               dh_current.trace_mesh = dh_prev.trace_mesh;
               dh_current.desurvey = dh_prev.desurvey;
@@ -795,16 +798,16 @@
 
       function updateURL() {
         updateDrillHoles();
-        let url = new URL(location.href);
-        url.search = `?${new URLSearchParams({
-          data: compressData({
-            collar: document.collar.getData(),
-            survey: document.survey.getData(),
-            lith: document.lith.getData(),
-            options: document.opts.getData(),
-          }),
-        }).toString()}`;
-        history.pushState(null, "", url.href);
+        // let url = new URL(location.href);
+        // url.search = `?${new URLSearchParams({
+        //   data: compressData({
+        //     collar: document.collar.getData(),
+        //     survey: document.survey.getData(),
+        //     lith: document.lith.getData(),
+        //     options: document.opts.getData(),
+        //   }),
+        // }).toString()}`;
+        // history.pushState(null, "", url.href);
       }
 
       function compressData(data) {
