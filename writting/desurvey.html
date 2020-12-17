@@ -234,7 +234,7 @@
           .slice(1)
           .filter((r) => r.every((c) => c !== ""))
           .forEach(([bhid, x, y, z, length]) => {
-            [x, y, z, length] = [x, z, y, length].map(parseFloat);
+            [x, y, z, length] = [x, z, y, length].map(v => parseFloat(v.replace(",", ".")));
             dh[bhid] = {
               collar: new THREE.Vector3(x, y, z),
               length: length,
@@ -249,7 +249,7 @@
           .slice(1)
           .filter((r) => r.every((c) => c !== "") && r[0] in dh)
           .forEach(([bhid, ...survey]) => {
-            survey = survey.map(parseFloat);
+            survey = survey.map(v => parseFloat(v.replace(",", ".")));
             dh[bhid].survey.push(survey);
           });
 
@@ -258,13 +258,13 @@
           .slice(1)
           .filter((r) => r.every((c) => c !== "") && r[0] in dh)
           .forEach(([bhid, from, to, lith]) => {
-            [from, to] = [from, to].map(parseFloat);
+            [from, to] = [from, to].map(v => parseFloat(v.replace(",", ".")));
             dh[bhid].intervals.push([from, to, lith]);
           });
 
         const opts = document.opts.getData();
         const trace_color = opts[1][1];
-        const offset = new THREE.Vector3(...opts[0].slice(1).map(parseFloat));
+        const offset = new THREE.Vector3(...opts[0].slice(1).map(v => parseFloat(v.replace(",", "."))));
         const lith_colors = {};
         opts.slice(3).forEach(([lith, color, ..._]) => {
             lith_colors[lith] = color;
@@ -298,6 +298,7 @@
           });
           const lmesh = new THREE.Mesh(lgeometry, lmaterial);
           segments_group.add(lmesh);
+          drillholes.push(lmesh);
           }
         }
         // bbox.setFromObject(dh_group);
@@ -421,7 +422,7 @@
             case "dip":
               input = document.createElement("input");
               input.type = "number";
-              input.value = current_selected;
+              input.value = current_selected.replace(",", ".");
               break;
             case "color":
               input = document.createElement("input");
@@ -484,7 +485,7 @@
           return "";
         }
         _startEditing({ x, y }) {
-          if (y === 2 || (y < 2 && !x)) return;
+        //   if (y === 2 || (y < 2 && !x)) return;
           this._editing = { x, y };
           const td = this._getCell(x, y);
 
@@ -515,7 +516,7 @@
             case "offset":
               input = document.createElement("input");
               input.type = "number";
-              input.value = current_selected;
+              input.value = current_selected.replace(",", ".");
               break;
             case "color":
             case "trace color":
@@ -549,7 +550,7 @@
         }
         _setVal(x, y, val) {
           // Prevent header editing after the initial loading
-          if (!y && this._getVal(x, y)) return;
+        //   if ((y === 2 || (y < 2 && !x)) && this._getVal(x, y)) return;
           return super._setVal(x, y, val);
         }
       }
@@ -606,6 +607,7 @@
           ["DH04", "100", "160", "30"],
         ];
         lith = lith ?? [
+        ["bhid", "from", "to", "lith"],
         ["DH01", "0", "20", "A"],
         ["DH01", "60", "90", "B"],
         ["DH02", "0", "10", "A"],
