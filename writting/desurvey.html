@@ -234,7 +234,9 @@
           .slice(1)
           .filter((r) => r.every((c) => c !== ""))
           .forEach(([bhid, x, y, z, length]) => {
-            [x, y, z, length] = [x, z, y, length].map(v => parseFloat(v.replace(",", ".")));
+            [x, y, z, length] = [x, z, y, length].map((v) =>
+              parseFloat(v.replace(",", "."))
+            );
             dh[bhid] = {
               collar: new THREE.Vector3(x, y, z),
               length: length,
@@ -249,7 +251,7 @@
           .slice(1)
           .filter((r) => r.every((c) => c !== "") && r[0] in dh)
           .forEach(([bhid, ...survey]) => {
-            survey = survey.map(v => parseFloat(v.replace(",", ".")));
+            survey = survey.map((v) => parseFloat(v.replace(",", ".")));
             dh[bhid].survey.push(survey);
           });
 
@@ -258,17 +260,41 @@
           .slice(1)
           .filter((r) => r.every((c) => c !== "") && r[0] in dh)
           .forEach(([bhid, from, to, lith]) => {
-            [from, to] = [from, to].map(v => parseFloat(v.replace(",", ".")));
+            [from, to] = [from, to].map((v) => parseFloat(v.replace(",", ".")));
             dh[bhid].intervals.push([from, to, lith]);
           });
 
         const opts = document.opts.getData();
+
         const trace_color = opts[1][1];
-        const offset = new THREE.Vector3(...opts[0].slice(1).map(v => parseFloat(v.replace(",", "."))));
-        const lith_colors = {};
-        opts.slice(3).forEach(([lith, color, ..._]) => {
-            lith_colors[lith] = color;
+        const trace_material = new THREE.MeshPhongMaterial({
+          color: trace_color,
+          // specular: 0xffffff,
+          shininess: 10,
+          side: THREE.DoubleSide,
         });
+
+        const default_lith = new THREE.MeshPhongMaterial({
+          color: "#ff0000",
+          // specular: 0xffffff,
+          shininess: 10,
+          side: THREE.DoubleSide,
+        });
+
+        const lith_materials = {};
+        opts.slice(3).forEach(([lith, color, ..._]) => {
+          lith_materials[lith] = new THREE.MeshPhongMaterial({
+            color: color,
+            // specular: 0xffffff,
+            shininess: 10,
+            side: THREE.DoubleSide,
+          });
+        });
+
+        const [ox, oz, oy] = opts[0]
+          .slice(1)
+          .map((v) => parseFloat(v.replace(",", ".")));
+        const offset = new THREE.Vector3(ox, oy, oz);
 
         for (const bhid in dh) {
           const { collar, length, survey, intervals } = dh[bhid];
@@ -277,28 +303,20 @@
 
           const path = new Drillhole(survey, collar, length);
           const geometry = new THREE.TubeGeometry(path, 64, 1, 8);
-          const material = new THREE.MeshPhongMaterial({
-            color: trace_color,
-            // specular: 0xffffff,
-            shininess: 10,
-            side: THREE.DoubleSide,
-          });
-          const mesh = new THREE.Mesh(geometry, material);
+
+          const mesh = new THREE.Mesh(geometry, trace_material);
           dh_group.add(mesh);
           drillholes.push(mesh);
 
           for (const [from, to, lith] of intervals) {
-              const lpath = path.getSegment(from, to);
-              const lgeometry = new THREE.TubeGeometry(lpath, 64, 2, 8);
-              const lmaterial = new THREE.MeshPhongMaterial({
-            color: lith_colors[lith] ?? "#ff0000",
-            // specular: 0xffffff,
-            shininess: 10,
-            side: THREE.DoubleSide,
-          });
-          const lmesh = new THREE.Mesh(lgeometry, lmaterial);
-          segments_group.add(lmesh);
-          drillholes.push(lmesh);
+            const lpath = path.getSegment(from, to);
+            const lgeometry = new THREE.TubeGeometry(lpath, 64, 2, 8);
+            const lmesh = new THREE.Mesh(
+              lgeometry,
+              lith_materials[lith] ?? default_lith
+            );
+            segments_group.add(lmesh);
+            drillholes.push(lmesh);
           }
         }
         // bbox.setFromObject(dh_group);
@@ -485,7 +503,7 @@
           return "";
         }
         _startEditing({ x, y }) {
-        //   if (y === 2 || (y < 2 && !x)) return;
+          //   if (y === 2 || (y < 2 && !x)) return;
           this._editing = { x, y };
           const td = this._getCell(x, y);
 
@@ -550,7 +568,7 @@
         }
         _setVal(x, y, val) {
           // Prevent header editing after the initial loading
-        //   if ((y === 2 || (y < 2 && !x)) && this._getVal(x, y)) return;
+          //   if ((y === 2 || (y < 2 && !x)) && this._getVal(x, y)) return;
           return super._setVal(x, y, val);
         }
       }
@@ -607,22 +625,22 @@
           ["DH04", "100", "160", "30"],
         ];
         lith = lith ?? [
-        ["bhid", "from", "to", "lith"],
-        ["DH01", "0", "20", "A"],
-        ["DH01", "60", "90", "B"],
-        ["DH02", "0", "10", "A"],
-        ["DH02", "50", "80", "B"],
-        ["DH03", "10", "20", "A"],
-        ["DH03", "40", "60", "B"],
-        ["DH04", "30", "50", "B"],
+          ["bhid", "from", "to", "lith"],
+          ["DH01", "0", "20", "A"],
+          ["DH01", "60", "90", "B"],
+          ["DH02", "0", "10", "A"],
+          ["DH02", "50", "80", "B"],
+          ["DH03", "10", "20", "A"],
+          ["DH03", "40", "60", "B"],
+          ["DH04", "30", "50", "B"],
         ];
         options = options ?? [
           ["offset", "0.0", "0.0", "0.0"],
           ["trace color", "#708090", "", ""],
           ["lith", "color", "", ""],
           ["A", "#00ff00", "", ""],
-          ["B", "#0000ff", "", ""]
-        ]
+          ["B", "#0000ff", "", ""],
+        ];
         document.collar.setData(collar);
         document.survey.setData(survey);
         document.lith.setData(lith);
@@ -678,7 +696,7 @@
             collar: document.collar.getData(),
             survey: document.survey.getData(),
             lith: document.lith.getData(),
-            opts: document.opts.getData(),
+            options: document.opts.getData(),
           }),
         }).toString()}`;
         history.pushState(null, "", url.href);
