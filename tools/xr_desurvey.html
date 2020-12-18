@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.1.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component@1.1.0/dist/aframe-environment-component.min.js"></script>
+    <script src="../js/gestures.js"></script>
+    <script src="../js/autoscale.js"></script>
+  </head>
+
+  <body>
+    <a-scene
+      renderer="logarithmicDepthBuffer: true"
+      gesture-detector
+    >
+    <a-assets>
+      <a-asset-item id="desurvey" src="desurvey.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- <a-entity environment="preset: forest; lighting: none; shadow: none; lightPosition: 0 2.15 0"
+    ></a-entity> -->
+
+        <a-gltf-model
+          id="model"
+          src="#desurvey"
+          autoscale="2"
+          position="0 0 -5"
+          class="clickable"
+          gesture-handler="minScale: 1e-10"
+        ></a-gltf-model>
+
+      <a-camera position="0 1.2 0"></a-camera>
+      <a-entity light="type: ambient; intensity: 0.5;"></a-entity>
+    </a-scene>
+  </body>
+</html>
