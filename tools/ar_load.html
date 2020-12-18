@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.1.0/aframe.min.js"></script>
+    <script src="https://rawgit.com/jeromeetienne/AR.js/master/aframe/build/aframe-ar.min.js"></script>
+    <script src="../js/gestures.js"></script>
+    <script src="../js/autoscale.js"></script>
+    <script src="../js/localforage.js"></script>
+  </head>
+
+  <body style="margin: 0px; overflow: hidden">
+    <!-- we add detectionMode and matrixCodeType to tell AR.js to recognize barcode markers -->
+    <a-scene
+      embedded
+      renderer="logarithmicDepthBuffer: true"
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+      gesture-detector
+    >
+      <a-marker
+        type="barcode"
+        value="5"
+        raycaster="objects: .clickable"
+        emitevents="true"
+        cursor="fuse: false; rayOrigin: mouse;"
+        id="markerA"
+      >
+        <a-gltf-model
+          id="model"
+          autoscale="2"
+          position="0 0 0"
+          class="clickable"
+          gesture-handler="minScale: 1e-10"
+        ></a-gltf-model>
+      </a-marker>
+      <a-entity camera></a-entity>
+    </a-scene>
+    <input id="myInput" type="file" style="visibility: hidden" />
+    <script>
+      const model = document.getElementById("model");
+      if (window.location.hash) {
+        const store = window.location.hash.substring(1);
+        localforage.getItem(store).then((data) => {
+          let url = URL.createObjectURL(data);
+          model.setAttribute("src", url);
+        });
+      }
+    </script>
+  </body>
+</html>

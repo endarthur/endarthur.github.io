@@ -14,6 +14,7 @@
     <script src="../js/three/GLTFExporter.js"></script>
     <script src="../js/lz-string.js"></script>
     <script src="../js/desurvey.js"></script>
+    <script src="../js/localforage.js"></script>
     <style>
       .content {
         max-width: 960px;
@@ -164,6 +165,8 @@
         </details>
       </div>
       <button id="dlmodel">download model</button>
+      <button id="armodel">AR.js</button>
+      <button id="xrmodel">WebXR</button>
 
       <hr />
       <sup id="fn1">
@@ -240,6 +243,23 @@
         // URL.revokeObjectURL( url ); breaks Firefox...
       }
 
+      function storeGLTF(input, target) {
+        const gltfExporter = new THREE.GLTFExporter();
+
+        gltfExporter.parse(
+          input,
+          function (result) {
+            localforage.setItem("desurvey", new Blob([result], { type: "application/octet-stream" })).then(
+                e => {
+                    console.log("data stored");
+                    window.open(`../tools/${target}#desurvey`);
+                }
+            );
+          },
+          { binary: true }
+        );
+      }
+
       function saveArrayBuffer(buffer, filename) {
         save(
           new Blob([buffer], { type: "application/octet-stream" }),
@@ -249,6 +269,12 @@
 
       document.getElementById("dlmodel").addEventListener("click", (e) => {
         exportGLTF(dh_group);
+      });
+      document.getElementById("armodel").addEventListener("click", (e) => {
+        storeGLTF(dh_group, "ar_load.html");
+      });
+      document.getElementById("xrmodel").addEventListener("click", (e) => {
+        storeGLTF(dh_group, "xr_load.html");
       });
 
       let dh_group = new THREE.Group();
