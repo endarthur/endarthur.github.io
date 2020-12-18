@@ -5,15 +5,87 @@
     <script src="https://unpkg.com/aframe-environment-component@1.1.0/dist/aframe-environment-component.min.js"></script>
     <script src="../js/gestures.js"></script>
     <script src="../js/autoscale.js"></script>
+    <script>
+      // Define a few custom components useful for AR mode. While these are somewhat reusable,
+      // I recommend checking if there are officially supported alternatives before copying
+      // these into new projects.
+  
+      AFRAME.registerComponent('ar-hit-test', {
+        init: function () {
+          this.xrHitTestSource = null;
+          this.viewerSpace = null;
+          this.refSpace = null;
+  
+          this.el.sceneEl.renderer.xr.addEventListener('sessionend', (ev) => {
+            this.viewerSpace = null;
+            this.refSpace = null;
+            this.xrHitTestSource = null;
+          });
+          this.el.sceneEl.renderer.xr.addEventListener('sessionstart', (ev) => {
+            let session = this.el.sceneEl.renderer.xr.getSession();
+  
+            let element = this.el;
+            session.addEventListener('select', function () {
+              let position = element.getAttribute('position');
+  
+              document.getElementById('model').setAttribute('position', position);
+              document.getElementById('light').setAttribute('position', {
+                x: (position.x - 2),
+                y: (position.y + 4),
+                z: (position.z + 2)
+              });
+            });
+  
+            session.requestReferenceSpace('viewer').then((space) => {
+              this.viewerSpace = space;
+              session.requestHitTestSource({space: this.viewerSpace})
+                  .then((hitTestSource) => {
+                    this.xrHitTestSource = hitTestSource;
+                  });
+            });
+  
+            session.requestReferenceSpace('local-floor').then((space) => {
+              this.refSpace = space;
+            });
+          });
+        },
+        tick: function () {
+          if (this.el.sceneEl.is('ar-mode')) {
+            if (!this.viewerSpace) return;
+  
+            let frame = this.el.sceneEl.frame;
+            let xrViewerPose = frame.getViewerPose(this.refSpace);
+  
+            if (this.xrHitTestSource && xrViewerPose) {
+              let hitTestResults = frame.getHitTestResults(this.xrHitTestSource);
+              if (hitTestResults.length > 0) {
+                let pose = hitTestResults[0].getPose(this.refSpace);
+  
+                let inputMat = new THREE.Matrix4();
+                inputMat.fromArray(pose.transform.matrix);
+  
+                let position = new THREE.Vector3();
+                position.setFromMatrixPosition(inputMat);
+                this.el.setAttribute('position', position);
+              }
+            }
+          }
+        }
+      });
+  
+    </script>
   </head>
 
   <body>
     <a-scene
       renderer="logarithmicDepthBuffer: true"
-      gesture-detector
+      webxr="requiredFeatures: hit-test,local-floor;"
     >
     <a-assets>
       <a-asset-item id="desurvey" src="desurvey.glb"></a-asset-item>
+      <a-asset-item id="reticle"
+      src="reticle.gltf"
+      response-type="arraybuffer"></a-asset-item>
     </a-assets>
 
     <!-- <a-entity environment="preset: forest; lighting: none; shadow: none; lightPosition: 0 2.15 0"
@@ -22,14 +94,29 @@
         <a-gltf-model
           id="model"
           src="#desurvey"
-          autoscale="2"
+          autoscale="1"
           position="0 0 -5"
           class="clickable"
           gesture-handler="minScale: 1e-10"
+          shadow="cast: true; receive: false"
         ></a-gltf-model>
+        <a-light type="directional"
+        light="castShadow: true;
+                       shadowMapHeight: 1024;
+                       shadowMapWidth: 1024;
+                       shadowCameraLeft: -7;
+                       shadowCameraRight: 5;
+                       shadowCameraBottom: -5;
+                       shadowCameraTop: 5;"
+        id="light"
+        target="model"
+        position="-2 4 2">
+   </a-light>
+        <a-sky color="#ECECEC"></a-sky>
 
       <a-camera position="0 1.2 0"></a-camera>
       <a-entity light="type: ambient; intensity: 0.5;"></a-entity>
+      <a-entity gltf-model="#reticle" scale="0.8 0.8 0.8" ar-hit-test></a-entity>
     </a-scene>
   </body>
 </html>
