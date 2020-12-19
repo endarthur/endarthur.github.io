@@ -2,7 +2,7 @@
 <html>
   <head>
     <script src="https://aframe.io/releases/1.1.0/aframe.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js">
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script>
       let maltData;
       let texture;
@@ -320,10 +320,10 @@ let model = Model([
     <a-scene
       embedded
       renderer="logarithmicDepthBuffer: true"
-      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+      arjs="sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
     >
-    <a-marker type="barcode" value="3" size="0.039" id="referenceBox"><a-box color="red" wireframe="true" scale="10 6 10"></a-box ></a-marker>
-      <a-marker type="barcode" value="0" id="markerB" size="0.04">
+    <a-marker type="barcode" value="3" id="referenceBox"><a-box color="red" wireframe="true" scale="10 6 10"></a-box ></a-marker>
+      <a-marker type="barcode" value="0" id="markerB">
         <a-entity section="reference: #referenceBox" id="section"></a-entity>
       </a-marker>
 
