@@ -144,7 +144,7 @@ let model = Model([
         };
       }
 
-      maltTransform = new THREE.OrthographicCamera(-3, 3, 2, -2, -3, 3);
+      maltTransform = new THREE.OrthographicCamera(-5, 5, 3, -3, -5, 5);
       maltTransform.updateProjectionMatrix();
 
       // https://coolors.co/080708-3772ff-df2935-fdca40-e6e8e6
@@ -322,7 +322,7 @@ let model = Model([
       renderer="logarithmicDepthBuffer: true"
       arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
     >
-    <a-marker type="barcode" value="3" size="0.039" id="referenceBox"><a-box color="red" wireframe="true" scale="6 4 6"></a-box ></a-marker>
+    <a-marker type="barcode" value="3" size="0.039" id="referenceBox"><a-box color="red" wireframe="true" scale="10 6 10"></a-box ></a-marker>
       <a-marker type="barcode" value="0" id="markerB" size="0.04">
         <a-entity section="reference: #referenceBox" id="section"></a-entity>
       </a-marker>
