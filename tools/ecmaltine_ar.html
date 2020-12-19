@@ -322,7 +322,7 @@ let model = Model([
       renderer="logarithmicDepthBuffer: true"
       arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
     >
-    <a-marker type="barcode" value="3" size="0.039"><a-box color="red" wireframe="true" scale="6 4 6"  id="referenceBox"></a-box ></a-marker>
+    <a-marker type="barcode" value="3" size="0.039" id="referenceBox"><a-box color="red" wireframe="true" scale="6 4 6"></a-box ></a-marker>
       <a-marker type="barcode" value="0" id="markerB" size="0.04">
         <a-entity section="reference: #referenceBox" id="section"></a-entity>
       </a-marker>
