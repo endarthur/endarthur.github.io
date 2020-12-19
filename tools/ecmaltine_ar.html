@@ -10,7 +10,7 @@
       let maltTransform;
       const up = new THREE.Vector3(0.0, 1.0, 0.0);
       const north = new THREE.Vector3(0.0, 0.0, -1.0);
-      const origin = new THREE.Vector3(0.0, 0.0, 7.0);
+      const origin = new THREE.Vector3(0.0, 0.0, 0.0);
       const m_width = 128,
         m_height = 128,
         m_depth = 128;
@@ -59,13 +59,8 @@ let model = Model([
   gr1,
   gr2,
   fold3,
-  // fold2,
+  fold2,
   // fold1,
-  PlanarFault(
-    Plane(90, 60),
-    origin,
-    DipVector(Plane(90, 60)).multiplyScalar(1)
-  ),
   ...liths,
 ]);`;
 
