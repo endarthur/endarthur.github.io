@@ -22,13 +22,13 @@ const p2 = Plane(-90.0, 60.0);
 
 const gr1 = PlanarFault(
   p1,
-  new THREE.Vector3(-2.0, 0.0, 0.0),
+  new THREE.Vector3(-5.0, 0.0, 0.0),
   DipVector(p1).multiplyScalar(0.70),
   false
 );
 const gr2 = PlanarFault(
   p2,
-  new THREE.Vector3(2.0, 0.0, 0.0),
+  new THREE.Vector3(5.0, 0.0, 0.0),
   DipVector(p2).multiplyScalar(-0.70),
   true
 );
@@ -59,8 +59,8 @@ let model = Model([
   gr1,
   gr2,
   fold3,
-  fold2,
-  fold1,
+  // fold2,
+  // fold1,
   PlanarFault(
     Plane(90, 60),
     origin,
