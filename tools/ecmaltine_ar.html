@@ -23,13 +23,13 @@ const p2 = Plane(-90.0, 60.0);
 const gr1 = PlanarFault(
   p1,
   new THREE.Vector3(-5.0, 0.0, 0.0),
-  DipVector(p1).multiplyScalar(0.70),
+  DipVector(p1).multiplyScalar(-0.70),
   false
 );
 const gr2 = PlanarFault(
   p2,
   new THREE.Vector3(5.0, 0.0, 0.0),
-  DipVector(p2).multiplyScalar(-0.70),
+  DipVector(p2).multiplyScalar(0.70),
   true
 );
 const liths = [4, 3, 2, 1].map((code) =>
@@ -45,7 +45,7 @@ const fold2 = SinusoidalFold(north, Plane(82, 10), origin, 0.700, 0.300);
 
 const fold3 = SinusoidalFold(
   north,
-  Plane(0, 80),
+  Plane(90, 80),
   origin,
   0.100,
   3.0
@@ -60,7 +60,7 @@ let model = Model([
   gr2,
   fold3,
   fold2,
-  // fold1,
+  fold1,
   ...liths,
 ]);`;
 
@@ -298,7 +298,7 @@ let model = Model([
           var el = this.el;
 
           // Create geometry.
-          this.geometry = new THREE.PlaneBufferGeometry(20, 20);
+          this.geometry = new THREE.PlaneBufferGeometry(40, 40);
           // this.geometry.rotateX(-90);
 
           // Create material.
