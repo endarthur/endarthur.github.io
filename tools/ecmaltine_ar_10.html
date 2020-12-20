@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.1.0/aframe.js"></script>
+    <script src="../js/aframe-ar_.js"></script>
+    <script>
+      let maltData;
+      let texture;
+      let maltMaterial;
+      let maltTransform;
+      const up = new THREE.Vector3(0.0, 1.0, 0.0);
+      const north = new THREE.Vector3(0.0, 0.0, -1.0);
+      const origin = new THREE.Vector3(0.0, 0.0, 0.0);
+      const m_width = 128,
+        m_height = 128,
+        m_depth = 128;
+
+      const model_source = `
+      const p0 = Plane(90, 1.0);
+const p1 = Plane(70.0, 60.0);
+const p2 = Plane(-70.0, 60.0);
+
+const gr1 = PlanarFault(
+  p1,
+  new THREE.Vector3(-1.5, 0.5, 0.0),
+  DipVector(p1).multiplyScalar(-0.20),
+  false
+);
+const gr2 = PlanarFault(
+  p2,
+  new THREE.Vector3(1.5, 0.5, 0.0),
+  DipVector(p2).multiplyScalar(0.20),
+  true
+);
+const liths = [4, 3, 2, 1].map((code) =>
+  Lith(
+    PlanarSurface(p0, new THREE.Vector3(0.0, -0.50 + 0.25 * code, 0.0)),
+    code
+  )
+);
+
+const fold1 = SinusoidalFold(north, Plane(90, 90), origin, 0.25, 1, Math.PI/2);
+const fold2 = SinusoidalFold(Plane(90, 90), north, origin, 0.5, 4, -Math.PI);
+
+// const fold2 = SinusoidalFold(north, Plane(82, 10), origin, 0.700, 0.300);
+
+// const fold3 = SinusoidalFold(
+//   north,
+//   Plane(90, 80),
+//   origin,
+//   0.100,
+//   3.0
+// );
+
+let model = Model([
+  Lith(
+    PlanarSurface(Plane(-90, 4), new THREE.Vector3(0.0, 0.6, 0.0)),
+    5
+  ),
+  gr1,
+  gr2,
+  // fold3,
+  fold2,
+  fold1,
+  ...liths,
+]);`;
+
+      Plane = function (dd, d) {
+        return new THREE.Vector3().setFromSphericalCoords(
+          1.0,
+          THREE.MathUtils.degToRad(d),
+          THREE.MathUtils.degToRad(180 - dd)
+        );
+      };
+
+      function PlanarSurface(plane, point, polarity = 1.0) {
+        const surface = new THREE.Plane().setFromNormalAndCoplanarPoint(
+          plane,
+          point
+        );
+        return (X) => polarity * surface.distanceToPoint(X);
+      }
+
+      function DipVector(plane) {
+        return new THREE.Vector3()
+          .crossVectors(up, plane)
+          .cross(plane)
+          .normalize();
+      }
+
+      function PlanarFault(
+        plane,
+        point,
+        displacement,
+        footwall_movement = false
+      ) {
+        const faultSurface = PlanarSurface(
+          plane,
+          point,
+          footwall_movement ? -1.0 : 1.0
+        );
+        return (X, v) => {
+          if (faultSurface(X) > 0) {
+            X.add(displacement);
+          }
+          return [X, v];
+        };
+      }
+
+      function SinusoidalFold(
+        hinge,
+        axial_plane_normal,
+        point,
+        amplitude,
+        wavelength,
+        phase=0
+      ) {
+        const axial_trace = new THREE.Vector3()
+          .crossVectors(axial_plane_normal, hinge)
+          .normalize();
+        const axialPlane = PlanarSurface(axial_plane_normal, point);
+        return (X, v) => {
+          X.addScaledVector(
+            axial_trace,
+            amplitude * Math.sin(axialPlane(X) / wavelength + phase)
+          );
+          return [X, v];
+        };
+      }
+
+      function Lith(surface, code) {
+        return (X, v) => [X, surface(X) > 0 ? code : v];
+      }
+
+      function Model(events) {
+        return (X) => {
+          let code = 0;
+          for (let i = 0; i < events.length; i++) {
+            const event = events[i];
+            [X, code] = event(X, code);
+            if (code !== 0) {
+              break;
+            }
+          }
+          return code;
+        };
+      }
+
+      maltTransform = new THREE.OrthographicCamera(-2, 2, 1, -1, -2, 2);
+      maltTransform.updateProjectionMatrix();
+
+      // https://coolors.co/080708-3772ff-df2935-fdca40-e6e8e6
+      colors = {
+        0: [...new THREE.Color(0x080708).toArray(), 1],
+        1: [...new THREE.Color(0xdf2935).toArray(), 1],
+        2: [...new THREE.Color(0xe6e8e6).toArray(), 1],
+        3: [...new THREE.Color(0x3772ff).toArray(), 1],
+        4: [...new THREE.Color(0xfdca40).toArray(), 1],
+        5: [...new THREE.Color(0xffffff).toArray(), 0],
+      };
+
+      maltData = new Uint8Array(4 * m_width * m_height * m_depth);
+      function runModel(model) {
+        console.time("model compilation");
+        const X = new THREE.Vector3(0.0, 0.0, 0.0);
+        let ijk = 0;
+        for (let k = 0; k < m_depth; k++) {
+          const z_ = (2 * (k - m_depth / 2.0)) / m_depth;
+          for (let j = 0; j < m_height; j++) {
+            const y_ = (2 * (j - m_height / 2.0)) / m_height;
+            for (let i = 0; i < m_width; i++) {
+              const x_ = (2 * (i - m_width / 2.0)) / m_width;
+              X.set(x_, y_, z_);
+              X.applyMatrix4(maltTransform.projectionMatrixInverse);
+              const [r, g, b, a] = colors[model(X)];
+              maltData[ijk++] = r * 255;
+              maltData[ijk++] = g * 255;
+              maltData[ijk++] = b * 255;
+              maltData[ijk++] = a * 255;
+            }
+          }
+        }
+        console.timeEnd("model compilation");
+      }
+
+      function compileModel() {
+        const source = model_source;
+        const model = new Function(`
+        ${source}
+        return model;
+        `)();
+        runModel(model);
+        // texture.needsUpdate = true;
+      }
+
+      compileModel();
+
+      texture = new THREE.DataTexture3D(maltData, m_width, m_height, m_depth);
+      texture.internalFormat = "RGBA8";
+      texture.format = THREE.RGBAFormat;
+      texture.type = THREE.UnsignedByteType;
+      texture.magFilter = THREE.LinearFilter;
+      texture.minFilter = THREE.LinearFilter;
+      texture.flipY = false;
+
+      function buildMaltMaterial(reference_marker) {
+        maltMaterial = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          // emissive: 0x072534,
+          side: THREE.DoubleSide,
+          roughness: 0.8,
+          metalness: 0.2,
+          flatShading: true,
+        });
+
+        // https://threejsfundamentals.org/threejs/lessons/threejs-optimize-lots-of-objects-animated.html
+        // console.log(maltTransform.projectionMatrix);
+        maltMaterial.onBeforeCompile = (shader) => {
+          shader.uniforms.malt = { value: texture };
+          shader.uniforms.maltTransform = {
+            value: maltTransform.projectionMatrix,
+          };
+          shader.uniforms.referenceTransform = {
+            value: reference_marker.object3D.matrixWorld,
+          }
+          //   console.log(shader.vertexShader);
+          //   console.log(shader.fragmentShader);
+
+          const vertexShaderReplacements = [
+            {
+              from: "#include <common>",
+              to: `
+                    #include <common>
+                    out vec3 maltPosition;
+                    uniform mat4 maltTransform;
+                    uniform mat4 referenceTransform;
+                    `,
+            },
+            {
+              from: "#include <project_vertex>",
+              to: `
+                    #include <project_vertex>
+                    maltPosition = (((maltTransform * inverse(referenceTransform) * modelMatrix * vec4( position, 1.0 )) + 1.0f)/2.0f).xyz ;
+                    `,
+            },
+          ];
+
+          const fragmentShaderReplacements = [
+            {
+              from: "#include <common>",
+              to: `
+                    #include <common>
+                    uniform highp sampler3D malt;
+                    in vec3 maltPosition;
+                    `,
+            },
+            {
+              from: "#include <color_fragment>",
+              to: `
+                    if(
+                      maltPosition.x < 0.0f
+                      || maltPosition.x > 1.0f
+                      || maltPosition.y < 0.0f
+                      || maltPosition.y > 1.0f
+                      || maltPosition.z < 0.0f
+                      || maltPosition.z > 1.0f
+                    ) discard;
+                    // diffuseColor.rgb = maltPosition;
+                    diffuseColor = texture(malt, maltPosition);
+                    if(diffuseColor.a < 1.0) discard;
+                    `,
+            },
+          ];
+
+          //
+
+          vertexShaderReplacements.forEach((rep) => {
+            shader.vertexShader = shader.vertexShader.replace(rep.from, rep.to);
+          });
+
+          fragmentShaderReplacements.forEach((rep) => {
+            shader.fragmentShader = shader.fragmentShader.replace(
+              rep.from,
+              rep.to
+            );
+          });
+        };
+      }
+
+      AFRAME.registerComponent("section", {
+        schema: {
+          reference: {type: "selector"}
+        },
+
+        /**
+         * Initial creation and setting of the mesh.
+         */
+        init: function () {
+          var data = this.data;
+          var el = this.el;
+
+          // Create geometry.
+          this.geometry = new THREE.PlaneBufferGeometry(40, 40);
+          // this.geometry.rotateX(-90);
+
+          // Create material.
+          buildMaltMaterial(this.data.reference);
+          this.material = maltMaterial;
+
+          // Create mesh.
+          this.mesh = new THREE.Mesh(this.geometry, this.material);
+
+          // Set mesh on entity.
+          el.setObject3D("mesh", this.mesh);
+        },
+      });
+    </script>
+  </head>
+
+  <body style="margin: 0px; overflow: hidden">
+    <!-- we add detectionMode and matrixCodeType to tell AR.js to recognize barcode markers -->
+    <a-scene
+      embedded
+      renderer="logarithmicDepthBuffer: true"
+      arjs="sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+    >
+    <a-marker type="barcode" value="3" id="referenceBox"><a-box color="red" wireframe="true" scale="4 2 4"></a-box ></a-marker>
+      <a-marker type="barcode" value="0" id="markerB">
+        <a-entity section="reference: #referenceBox" id="section"></a-entity>
+      </a-marker>
+
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
