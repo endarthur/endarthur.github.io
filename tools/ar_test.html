@@ -2,34 +2,70 @@
 <html>
   <head>
     <script src="https://aframe.io/releases/1.1.0/aframe.min.js"></script>
-    <!-- <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script> -->
-    <script src="https://rawgit.com/jeromeetienne/AR.js/master/aframe/build/aframe-ar.min.js"></script>
-    <!-- <script src="https://rawgit.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script> -->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.3.1/aframe/build/aframe-ar-nft.js"></script>
+    <!-- <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script> -->
   </head>
 
   <body style="margin: 0px; overflow: hidden">
     <!-- we add detectionMode and matrixCodeType to tell AR.js to recognize barcode markers -->
     <a-scene
-      embedded
       renderer="logarithmicDepthBuffer: true"
-      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+      arjs="sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+      vr-mode-ui="enabled: false"
     >
-      <a-assets>
-        <a-asset-item id="sections" src="sections2.glb"></a-asset-item>
+    <!-- gesture-detector -->
+      <!-- <a-assets>
+        <a-asset-item id="sections" src="pluma.glb"></a-asset-item>
       </a-assets>
 
-      <!-- <a-marker type="barcode" value="4">
-        <a-box position="0 0.5 0" color="yellow"></a-box>
+      <a-marker
+        type="barcode"
+        value="5"
+        raycaster="objects: .clickable"
+        emitevents="true"
+        cursor="fuse: false; rayOrigin: mouse;"
+        id="markerA"
+      >
+        <a-gltf-model
+          src="#sections"
+          scale="0.2 0.2 0.2"
+          position="0 0 0"
+          class="clickable"
+          gesture-handler="rotationFactor:0"
+        ></a-gltf-model>
       </a-marker> -->
-
-      <a-marker type="barcode" value="17" smooth="true">
-        <!-- <a-box position="0 0.5 0" color="yellow"></a-box> -->
-        <a-gltf-model src="#sections"  scale="0.005 0.005 0.005" position="-7.5 0 0"></a-gltf-model>
-      </a-marker>
-
-      <a-marker type="barcode" value="27">
-        <!-- <a-box position="0 0.5 0" color="red"></a-box> -->
-      </a-marker>
+      <a-marker type="barcode" value="0" id="mk0" size="0.04"><a-box color="red" wireframe="true"></a-box></a-marker>
+        <a-marker type="barcode" value="1" id="mk1" size="0.04"><a-box color="green" wireframe="true"></a-box></a-marker>
+      <a-marker type="barcode" value="2" id="mk2" size="0.04"><a-box color="blue" wireframe="true"></a-box></a-marker>
+      <a-marker type="barcode" value="3" id="mk3" size="0.04"><a-box color="cyan" wireframe="true"></a-box></a-marker>
+      <a-marker type="barcode" value="4" id="mk4" size="0.04"><a-box color="yellow" wireframe="true"></a-box></a-marker>
+      <a-marker type="barcode" value="5" id="mk5" size="0.04"><a-box color="magenta" wireframe="true"></a-box></a-marker>
+      <!-- <a-marker type="barcode" value="6"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="7"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="8"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="9"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="10"><a-box ></a-box ></a-marker>
+        <a-marker type="barcode" value="11"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="12"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="13"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="14"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="15"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="16"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="17"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="18"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="19"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="20"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="21"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="22"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="23"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="24"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="25"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="26"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="27"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="28"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="29"><a-box ></a-box ></a-marker>
+      <a-marker type="barcode" value="30"><a-box ></a-box ></a-marker>
+        <a-marker type="barcode" value="31"><a-box ></a-box ></a-marker> -->
 
       <!-- use this <a-entity camera> to support multiple-markers, otherwise use <a-marker-camera> instead of </a-marker> -->
       <a-entity camera></a-entity>
