@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.1.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.3.1/aframe/build/aframe-ar.js"></script>
+  </head>
+
+  <body style="margin: 0px; overflow: hidden">
+    <script>
+      const maltNormal = new THREE.Vector3();
+      const maltRake = new THREE.Vector3();
+      const v_ = new THREE.Vector3();
+      const maltOrientation = new THREE.Matrix4();
+      const euler = new THREE.Euler(0.0, 0.0, 0.0, "YXZ");
+      const maltParams = new THREE.Vector2(1.0, 0.0);
+      let maltMaterial;
+      const colors = new Uint8Array([
+        27,
+        158,
+        119,
+        217,
+        95,
+        2,
+        117,
+        112,
+        179,
+        231,
+        41,
+        138,
+        102,
+        166,
+        30,
+        230,
+        171,
+        2,
+        166,
+        118,
+        29,
+        102,
+        102,
+        102,
+      ]);
+      const maltColors = new THREE.DataTexture(colors, 8, 1, THREE.RGBFormat);
+      maltColors.needsUpdate = true;
+      maltColors.flipY = false;
+      function buildMaltMaterial() {
+        maltMaterial = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          // emissive: 0x072534,
+          side: THREE.DoubleSide,
+          roughness: 0.8,
+          metalness: 0.2,
+        });
+
+        // https://threejsfundamentals.org/threejs/lessons/threejs-optimize-lots-of-objects-animated.html
+        // console.log(maltTransform.projectionMatrix);
+        maltMaterial.onBeforeCompile = (shader) => {
+          shader.uniforms.maltNormal = {
+            value: maltNormal,
+          };
+          shader.uniforms.maltRake = {
+            value: maltRake,
+          };
+          shader.uniforms.maltParams = {
+            value: maltParams,
+          };
+          shader.uniforms.maltColors = {
+            value: maltColors,
+          };
+          //   console.log(shader.vertexShader);
+          //   console.log(shader.fragmentShader);
+
+          const vertexShaderReplacements = [
+            {
+              from: "#include <common>",
+              to: `
+                    #include <common>
+                    out vec3 maltPosition;
+                    `,
+            },
+            {
+              from: "#include <project_vertex>",
+              to: `
+                    #include <project_vertex>
+                    maltPosition = position;
+                    `,
+            },
+          ];
+
+          const fragmentShaderReplacements = [
+            {
+              from: "#include <common>",
+              to: `
+                    #include <common>
+                    uniform sampler2D maltColors;
+                    uniform vec3 maltNormal;
+                    uniform vec3 maltRake;
+                    uniform vec2 maltParams;
+                    in vec3 maltPosition;
+                    vec3 fragPosition;
+                    `,
+            },
+            {
+              from: "#include <color_fragment>",
+              to: `
+                    if(
+                      dot(maltPosition, maltNormal) > 0.0f
+                    ) fragPosition = maltPosition + maltRake*maltParams.x;
+                    else fragPosition = maltPosition;
+                    // diffuseColor.rgb = fragPosition;
+                    diffuseColor = texture2D(maltColors, vec2((fragPosition.y + 1.0f)/2.0f, 0.0));
+                    `,
+            },
+          ];
+
+          //
+
+          vertexShaderReplacements.forEach((rep) => {
+            shader.vertexShader = shader.vertexShader.replace(rep.from, rep.to);
+          });
+
+          fragmentShaderReplacements.forEach((rep) => {
+            shader.fragmentShader = shader.fragmentShader.replace(
+              rep.from,
+              rep.to
+            );
+          });
+        };
+      }
+
+      AFRAME.registerComponent("pageref", {
+        schema: {
+          atti: { type: "selector" },
+          rake: { type: "selector" },
+          params: { type: "selector" },
+
+          //   cart: { type: "selector" },
+          stereo: { type: "selector" },
+          line: { type: "selector" },
+        },
+
+        init: function () {
+          this.v0 = new THREE.Vector3();
+          this.v1 = new THREE.Vector3();
+          this.v2 = new THREE.Vector3();
+          this.stereo_center = new THREE.Vector3(0, 0, -3.49475);
+          this.matrixReference = new THREE.Matrix4();
+        },
+
+        tick: function (time, timeDelta) {
+          this.matrixReference.copy(this.el.object3D.matrixWorld).invert();
+          var directionVec3 = this.directionVec3;
+
+          // Grab position vectors (THREE.Vector3) from the entities' three.js objects.
+          this.v0
+            .copy(this.data.atti.object3D.position)
+            .applyMatrix4(this.matrixReference);
+          this.data.rake.object3D
+            .getWorldPosition(this.v1)
+            .applyMatrix4(this.matrixReference)
+            .sub(this.v0);
+          this.v0.sub(this.stereo_center);
+          const dx = this.v0.x;
+          const dy = this.v0.z;
+          const d_length = Math.sqrt(dx * dx + dy * dy) / 1.9387500000000002;
+          const dd = Math.atan2(dy, dx);
+          const d = (THREE.MathUtils.clamp(d_length, 0, 1) * Math.PI) / 2;
+          // maltNormal.setFromSphericalCoords(1, d, Math.PI / 2 - dd);
+          // maltRake.setFromSphericalCoords(1, d + Math.PI / 2, Math.PI / 2 - dd);
+          // this.data.stereo.object3D.rotation.order = "YXZ";
+          // this.data.stereo.object3D.rotation.set(
+          //   -Math.PI / 2 + d,
+          //   Math.PI / 2 - dd,
+          //   0
+          // );
+          // this.data.line.object3D.rotation.order = "YXZ";
+          euler.set(
+            d - Math.PI / 2,
+            Math.PI / 2 - dd,
+            Math.PI / 2 - Math.atan2(this.v1.z, this.v1.x)
+          );
+          maltOrientation.makeRotationFromEuler(euler);
+          maltOrientation.extractBasis(maltRake, v_, maltNormal);
+
+          this.data.params.object3D
+            .getWorldPosition(this.v2)
+            .applyMatrix4(this.matrixReference)
+            .sub(this.stereo_center)
+            .multiplyScalar(1 / 2.0480000000000005);
+            maltParams.set(this.v2.x + 1.0, this.v2.z);
+          // console.log((this.el.object3D.rotation.y - this.data.atti.object3D.rotation.y));
+          // this.data.stereo.object3D.lookAt(this.v1);
+          // console.log((dd < 0? dd + 2*Math.PI: dd)*180.0/Math.PI, d*180.0/Math.PI);
+        },
+      });
+
+      buildMaltMaterial();
+      AFRAME.registerComponent("malt-block", {
+        schema: {
+          // ref: { type: "selector" },
+          width: { type: "number", default: 1 },
+          height: { type: "number", default: 1 },
+          depth: { type: "number", default: 1 },
+        },
+
+        init: function () {
+          var data = this.data;
+          var el = this.el;
+          this.geometry = new THREE.BoxBufferGeometry(
+            data.width,
+            data.height,
+            data.depth
+          );
+          this.material = maltMaterial;
+          this.mesh = new THREE.Mesh(this.geometry, this.material);
+          el.setObject3D("mesh", this.mesh);
+        },
+      });
+    </script>
+    <a-scene
+      embedded
+      renderer="logarithmicDepthBuffer: true"
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+      vr-mode-ui="enabled: false"
+    >
+      <a-marker type="barcode" value="1" id="mk0" size="0.04">
+        <a-circle radius="0.05" rotation="-90 0 0" color="#ff0000"></a-circle>
+        <a-circle
+          id="rake"
+          position="0 0 -1"
+          radius="0.05"
+          rotation="-90 0 0"
+          color="#0000ff"
+        ></a-circle>
+      </a-marker>
+      <a-marker type="barcode" value="5" id="par" size="0.04"><a-circle radius="0.05" rotation="-90 0 0" color="#00ff00"></a-circle></a-marker>
+      <a-marker
+        type="barcode"
+        value="3"
+        id="mk3"
+        size="0.04"
+        pageref="atti:#mk0; rake:#rake; params:#par"
+      >
+        <!-- <a-plane
+          color="red"
+          wireframe="true"
+          position="0 0 -2.3862499999999995"
+          rotation="-90 0 0"
+          height="7.425"
+          width="5.25"
+        ></a-plane> -->
+        <!-- <a-entity position="0 0 -3.49475" id="rake-line"
+          ><a-cylinder radius="0.1" height="2" position="0 1 0"></a-cylinder
+        ></a-entity> -->
+        <a-entity
+          malt-block="width:3; height:1; depth:2"
+          position="0 1 0"
+        ></a-entity>
+        <!-- (2.337932764676369, 1.2968227424749164) -->
+        <!-- (3.49475, 1.9387500000000002) -->
+        <!-- <a-circle
+          radius="1.9387500000000002"
+          position="0 0 -3.49475"
+          id="stereotest"
+          material="side: double"
+          theta-length="180"
+          color="#a6cee3"
+          transparent="true"
+          opacity="0.5"
+        ></a-circle> -->
+        <!-- wireframe="true" -->
+        <!-- rotation="-90 0 0" -->
+      </a-marker>
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
