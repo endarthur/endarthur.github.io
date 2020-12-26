@@ -149,45 +149,39 @@
 
         tick: function (time, timeDelta) {
           this.matrixReference.copy(this.el.object3D.matrixWorld).invert();
-          var directionVec3 = this.directionVec3;
 
-          // Grab position vectors (THREE.Vector3) from the entities' three.js objects.
-          this.v0
-            .copy(this.data.atti.object3D.position)
-            .applyMatrix4(this.matrixReference);
-          this.data.rake.object3D
-            .getWorldPosition(this.v1)
-            .applyMatrix4(this.matrixReference)
-            .sub(this.v0);
-          this.v0.sub(this.stereo_center);
-          const dx = this.v0.x;
-          const dy = this.v0.z;
-          const d_length = Math.sqrt(dx * dx + dy * dy) / 1.9387500000000002;
-          const dd = Math.atan2(dy, dx);
-          const d = (THREE.MathUtils.clamp(d_length, 0, 1) * Math.PI) / 2;
-          // maltNormal.setFromSphericalCoords(1, d, Math.PI / 2 - dd);
-          // maltRake.setFromSphericalCoords(1, d + Math.PI / 2, Math.PI / 2 - dd);
-          // this.data.stereo.object3D.rotation.order = "YXZ";
-          // this.data.stereo.object3D.rotation.set(
-          //   -Math.PI / 2 + d,
-          //   Math.PI / 2 - dd,
-          //   0
-          // );
-          // this.data.line.object3D.rotation.order = "YXZ";
-          euler.set(
-            d - Math.PI / 2,
-            Math.PI / 2 - dd,
-            Math.PI / 2 - Math.atan2(this.v1.z, this.v1.x)
-          );
-          maltOrientation.makeRotationFromEuler(euler);
-          maltOrientation.extractBasis(maltRake, v_, maltNormal);
+          if (this.data.atti.object3D.visible) {
+            this.v0
+              .copy(this.data.atti.object3D.position)
+              .applyMatrix4(this.matrixReference);
+            this.data.rake.object3D
+              .getWorldPosition(this.v1)
+              .applyMatrix4(this.matrixReference)
+              .sub(this.v0);
+            this.v0.sub(this.stereo_center);
+            const dx = this.v0.x;
+            const dy = this.v0.z;
+            const d_length = Math.sqrt(dx * dx + dy * dy) / 1.9387500000000002;
+            const dd = Math.atan2(dy, dx);
+            const d = (THREE.MathUtils.clamp(d_length, 0, 1) * Math.PI) / 2;
+            euler.set(
+              d - Math.PI / 2,
+              Math.PI / 2 - dd,
+              Math.PI / 2 - Math.atan2(this.v1.z, this.v1.x)
+            );
+            maltOrientation.makeRotationFromEuler(euler);
+            maltOrientation.extractBasis(maltRake, v_, maltNormal);
+          }
 
-          this.data.params.object3D
+          if (this.data.params.object3D.visible) {
+            this.data.params.object3D
             .getWorldPosition(this.v2)
             .applyMatrix4(this.matrixReference)
             .sub(this.stereo_center)
             .multiplyScalar(1 / 2.0480000000000005);
             maltParams.set(this.v2.x + 1.0, this.v2.z);
+          }
+
           // console.log((this.el.object3D.rotation.y - this.data.atti.object3D.rotation.y));
           // this.data.stereo.object3D.lookAt(this.v1);
           // console.log((dd < 0? dd + 2*Math.PI: dd)*180.0/Math.PI, d*180.0/Math.PI);
@@ -233,7 +227,9 @@
           color="#0000ff"
         ></a-circle>
       </a-marker>
-      <a-marker type="barcode" value="5" id="par" size="0.04"><a-circle radius="0.05" rotation="-90 0 0" color="#00ff00"></a-circle></a-marker>
+      <a-marker type="barcode" value="5" id="par" size="0.04"
+        ><a-circle radius="0.05" rotation="-90 0 0" color="#00ff00"></a-circle
+      ></a-marker>
       <a-marker
         type="barcode"
         value="3"
