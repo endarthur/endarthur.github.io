@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>three.js webgl - transform controls</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <!-- <link type="text/css" rel="stylesheet" href="main.css"> -->
+    <script src="../js/three/three.js"></script>
+    <script src="../js/three/OrbitControls.js"></script>
+    <script src="../js/three/TransformControls.js"></script>
+    <style>
+      body {
+        height: 100%;
+        margin: 0;
+        background-color: #000;
+        color: #fff;
+        font-family: Monospace;
+        font-size: 13px;
+        line-height: 24px;
+        overscroll-behavior: none;
+      }
+      #info {
+        position: absolute;
+        top: 0px;
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        text-align: center;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        pointer-events: none;
+        z-index: 1; /* TODO Solve this in HTML */
+      }
+      body {
+        margin: 0;
+        background-color: #ececec;
+        /* color: #fff; */
+        font-family: Monospace;
+        font-size: 13px;
+        line-height: 24px;
+        overscroll-behavior: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">
+	  Modified from three.js' example Transform Controls<br />
+      "R" rotate | "S" scale | "+/-" adjust size<br />
+      "Q" toggle world/local space | "Shift" snap to grid<br />
+      "X" toggle X | "Y" toggle Y | "Z" toggle Z<br />
+      "C" toggle camera | "Spacebar" toggle clip
+    </div>
+
+    <script>
+      let cameraPersp, cameraOrtho, currentCamera;
+      let scene, renderer, control, orbit;
+
+      init();
+      render();
+
+      function createPlaneStencilGroup(geometry, plane, renderOrder) {
+        const group = new THREE.Group();
+        const baseMat = new THREE.MeshBasicMaterial();
+        baseMat.depthWrite = false;
+        baseMat.depthTest = false;
+        baseMat.colorWrite = false;
+        baseMat.stencilWrite = true;
+        baseMat.stencilFunc = THREE.AlwaysStencilFunc;
+
+        // back faces
+        const mat0 = baseMat.clone();
+        mat0.side = THREE.BackSide;
+        mat0.clippingPlanes = [plane];
+        mat0.stencilFail = THREE.IncrementWrapStencilOp;
+        mat0.stencilZFail = THREE.IncrementWrapStencilOp;
+        mat0.stencilZPass = THREE.IncrementWrapStencilOp;
+
+        const mesh0 = new THREE.Mesh(geometry, mat0);
+        mesh0.renderOrder = renderOrder;
+        group.add(mesh0);
+
+        // front faces
+        const mat1 = baseMat.clone();
+        mat1.side = THREE.FrontSide;
+        mat1.clippingPlanes = [plane];
+        mat1.stencilFail = THREE.DecrementWrapStencilOp;
+        mat1.stencilZFail = THREE.DecrementWrapStencilOp;
+        mat1.stencilZPass = THREE.DecrementWrapStencilOp;
+
+        const mesh1 = new THREE.Mesh(geometry, mat1);
+        mesh1.renderOrder = renderOrder;
+
+        group.add(mesh1);
+
+        return group;
+      }
+
+      function init() {
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.shadowMap.enabled = true;
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x263238);
+        window.addEventListener("resize", onWindowResize);
+        document.body.appendChild(renderer.domElement);
+
+        renderer.localClippingEnabled = true;
+
+        const aspect = window.innerWidth / window.innerHeight;
+
+        cameraPersp = new THREE.PerspectiveCamera(50, aspect, 0.01, 30000);
+        cameraOrtho = new THREE.OrthographicCamera(
+          -600 * aspect,
+          600 * aspect,
+          600,
+          -600,
+          0.01,
+          30000
+        );
+        currentCamera = cameraOrtho;
+
+        currentCamera.position.set(1000, 500, 1000);
+        currentCamera.lookAt(0, 200, 0);
+
+        scene = new THREE.Scene();
+        scene.add(new THREE.GridHelper(1000, 10, 0x888888, 0x444444));
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(5, 10, 7.5);
+        dirLight.castShadow = true;
+        dirLight.shadow.camera.right = 2;
+        dirLight.shadow.camera.left = -2;
+        dirLight.shadow.camera.top = 2;
+        dirLight.shadow.camera.bottom = -2;
+
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        // const texture = new THREE.TextureLoader().load( 'textures/crate.gif', render );
+        // texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+        // const material = new THREE.MeshPhongMaterial({
+        //   color: 0x156289,
+        //   emissive: 0x072534,
+        //   side: THREE.DoubleSide,
+        //   flatShading: true,
+        //   clippingPlanes: [plane],
+        // });
+        const lineMaterial = new THREE.LineBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.5,
+        });
+
+        orbit = new THREE.OrbitControls(currentCamera, renderer.domElement);
+        orbit.update();
+        orbit.addEventListener("change", render);
+
+        control = new THREE.TransformControls(
+          currentCamera,
+          renderer.domElement
+        );
+        control.setMode("scale");
+        control.space = "local";
+        control.addEventListener("change", render);
+
+        control.addEventListener("dragging-changed", function (event) {
+          orbit.enabled = !event.value;
+        });
+
+        // const mesh = new THREE.Mesh(geometry, material);
+        // group.add(mesh);
+        // group.add(stencilGroup);
+        // group.add(new THREE.LineSegments(geometry, lineMaterial));
+
+        const planes = [new THREE.Plane(new THREE.Vector3(0, -1, 0), 0)];
+
+        const geometry = new THREE.SphereGeometry(100, 32, 32);
+        object = new THREE.Group();
+        scene.add(object);
+
+        // Set up clip plane rendering
+        planeObjects = [];
+        const planeGeom = new THREE.PlaneGeometry(10000, 10000);
+        planeGeom.rotateX(Math.PI / 2);
+
+        const poGroup = new THREE.Group();
+        const plane = planes[0];
+        const stencilGroup = createPlaneStencilGroup(geometry, plane, 1);
+
+        // plane is clipped by the other clipping planes
+        const planeMat = new THREE.MeshStandardMaterial({
+          color: 0xe91e63,
+          metalness: 0.1,
+          roughness: 0.75,
+          //   clippingPlanes: [],
+
+          stencilWrite: true,
+          stencilRef: 0,
+          stencilFunc: THREE.NotEqualStencilFunc,
+          stencilFail: THREE.ReplaceStencilOp,
+          stencilZFail: THREE.ReplaceStencilOp,
+          stencilZPass: THREE.ReplaceStencilOp,
+
+          side: THREE.DoubleSide,
+        });
+        const po = new THREE.Mesh(planeGeom, planeMat);
+        po.onAfterRender = function (renderer) {
+          renderer.clearStencil();
+        };
+
+        po.renderOrder = 1.1;
+
+        object.add(stencilGroup);
+        poGroup.add(po);
+        planeObjects.push(po);
+        scene.add(poGroup);
+
+        object.add(new THREE.AxesHelper(300));
+		const complement_axes = new THREE.AxesHelper(300);
+		complement_axes.geometry.scale(-1, -1, -1);
+        object.add(complement_axes);
+
+        const material = new THREE.MeshStandardMaterial({
+          color: 0x0c77ba,
+          metalness: 0.1,
+          roughness: 0.75,
+          clippingPlanes: planes,
+          //   clipShadows: true,
+          //   side: THREE.DoubleSide,
+        });
+
+        // add the color
+        const clippedColorFront = new THREE.Mesh(geometry, material);
+        // clippedColorFront.castShadow = true;
+        clippedColorFront.renderOrder = 6;
+        object.add(clippedColorFront);
+
+        control.attach(object);
+        scene.add(control);
+
+        window.addEventListener("keydown", function (event) {
+          switch (event.keyCode) {
+            case 81: // Q
+              control.setSpace(control.space === "local" ? "world" : "local");
+              break;
+
+            case 16: // Shift
+              control.setTranslationSnap(100);
+              control.setRotationSnap(THREE.MathUtils.degToRad(15));
+              control.setScaleSnap(0.25);
+              break;
+
+            case 82: // R
+              control.setMode("rotate");
+              break;
+
+            case 83: // R
+              control.setMode("scale");
+              break;
+
+            case 67: // C
+              const position = currentCamera.position.clone();
+
+              currentCamera = currentCamera.isPerspectiveCamera
+                ? cameraOrtho
+                : cameraPersp;
+              currentCamera.position.copy(position);
+
+              orbit.object = currentCamera;
+              control.camera = currentCamera;
+
+              currentCamera.lookAt(
+                orbit.target.x,
+                orbit.target.y,
+                orbit.target.z
+              );
+              onWindowResize();
+              break;
+
+            case 187:
+            case 107: // +, =, num+
+              control.setSize(control.size + 0.1);
+              break;
+
+            case 189:
+            case 109: // -, _, num-
+              control.setSize(Math.max(control.size - 0.1, 0.1));
+              break;
+
+            case 88: // X
+              control.showX = !control.showX;
+              break;
+
+            case 89: // Y
+              control.showY = !control.showY;
+              break;
+
+            case 90: // Z
+              control.showZ = !control.showZ;
+              break;
+
+            case 32: // Spacebar
+              renderer.localClippingEnabled = !renderer.localClippingEnabled;
+              onWindowResize();
+              break;
+          }
+        });
+
+        window.addEventListener("keyup", function (event) {
+          switch (event.keyCode) {
+            case 16: // Shift
+              control.setTranslationSnap(null);
+              control.setRotationSnap(null);
+              control.setScaleSnap(null);
+              break;
+          }
+        });
+      }
+
+      function onWindowResize() {
+        const aspect = window.innerWidth / window.innerHeight;
+
+        cameraPersp.aspect = aspect;
+        cameraPersp.updateProjectionMatrix();
+
+        cameraOrtho.left = cameraOrtho.bottom * aspect;
+        cameraOrtho.right = cameraOrtho.top * aspect;
+        cameraOrtho.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        render();
+      }
+
+      function render() {
+        renderer.render(scene, currentCamera);
+      }
+    </script>
+  </body>
+</html>
