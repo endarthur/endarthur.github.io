@@ -9,8 +9,8 @@
       src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"
       async
     ></script>
-    <script src="../js/three/three_.js"></script>
-    <script src="../js/three/OrbitControls_.js"></script>
+    <script src="../js/three/three.js"></script>
+    <script src="../js/three/OrbitControls.js"></script>
     <script src="../js/three/GLTFExporter.js"></script>
     <script src="../js/lz-string.js"></script>
     <script src="../js/desurvey.js"></script>
@@ -440,7 +440,7 @@
           let path;
           if (dh[bhid].desurvey === null) {
             path = new Drillhole(survey, collar, length);
-            const geometry = new THREE.TubeBufferGeometry(
+            const geometry = new THREE.TubeGeometry(
               path,
               Math.max(Math.ceil(path.total_length / 2), 2),
               1,
@@ -477,9 +477,7 @@
           }
 
           for (const lith in dh[bhid].interval_meshes) {
-            const geometry = new THREE.BufferGeometry().fromGeometry(
-              dh[bhid].interval_meshes[lith]
-            );
+            const geometry = dh[bhid].interval_meshes[lith];
             const mesh = new THREE.Mesh(geometry, liths[lith] ?? default_lith);
             dh_group.add(mesh);
             dh[bhid].interval_meshes[lith] = mesh;
