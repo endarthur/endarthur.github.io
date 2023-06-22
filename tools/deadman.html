@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Deadmon</title>
+    <style>
+      .content {
+        max-width: 960px;
+        margin: auto;
+      }
+
+      .timeout {
+        color: red;
+      }
+
+      .stopped {
+        color: orange;
+      }
+
+      .running {
+        color: darkgreen;
+      }
+    </style>
+    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+    <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+    integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+   integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+   crossorigin=""></script> -->
+  </head>
+
+  <body>
+    <div class="content">
+      <h1>Deadmon</h1>
+      <nav>
+        <a href="../index.html">Home</a>
+        <a href="../site.html">Site</a>
+      </nav>
+      <span id="page-created">created: <em>2023-06-22</em></span>
+      <span id="page-modified">modified: <em>2023-06-22</em></span>
+      <h2>Deadman Switch</h2>
+      <p>
+        This page works as a simple deadman switch. After starting, it expects a
+        heartbeat signal via a <code>BroadcastChannel</code> (by default, called
+        deadman, but can be set in a fragment query parameter called channel in the url)
+        before the timer runs out. If not, it will send a notification via an
+        incoming webhook.
+      </p>
+      <p>
+        The timer is set to 5 minutes. You can change this by adding a query
+        parameter to the URL fragment, in seconds. For example, to set the timer to 10 minutes, add
+        <code>?timer=600</code> to the URL fragment. It can also be started automatically, by adding
+        <code>?start</code> to the URL fragment.
+      </p>
+      <p>
+        The notification is sent to a webhook. You can change this by adding a
+        fragment query parameter to the URL. For example, to set the webhook to
+        <code>https://example.com</code>, add
+        <code>?webhook=https://example.com</code> to the URL.
+      </p>
+      <h3>Current Status</h3>
+      <p>
+        <span id="status" class="stopped">Not started</span>
+      </p>
+      <p>
+        webhook: <input type="text" id="webhook" value="https://example.com"></input>
+      </p>
+      <p>
+        channel: <input type="text" id="channel" value="deadman"></input>
+      </p>
+      <p>
+        timer: <input type="text" id="timer" value="300"></input>
+      <p>
+        <span id="remaining-time">0</span> seconds remaining
+      </p>
+      <p>
+        <span id="heartbeat-count">0</span> heartbeats received
+      </p>
+      <p>
+        <span id="heartbeat-time">0</span> seconds since last heartbeat
+      </p>
+
+      <p>
+        <button id="start">Start</button>
+        <button id="stop">Stop</button>
+      </p>
+      <p>
+        <button id="reset">Reset</button>
+      </p>
+      <p>
+        <a id="heartbeat" href="/store.html">Heartbeat</a>
+      </p>
+
+      <hr />
+      <!-- <sup id="fn1">
+            <p>1. Always check if the angle between two consecutive survey points is not zero or near zero; if so, use the tangent method
+                for the segment instead of spherical arc, as the numerical precision might blow up and give you bad results.
+            </p>
+            <p>
+                On the subject of angles, you can either use the arccosine of the dot product or the arctangent of the magnitude of
+                the cross product over the dot product. The second method is much more precise for small angles and will allow you to
+                use a closer tolerance before considering that the angle between two survey points is zero. It's costlier in terms
+                of processing, though.
+                <a href="#ref1" title="Jump back to footnote 1 in the text.">&#8617;</a>
+            </p></sup> -->
+      <!-- <h2>References</h2>
+        <ul>
+            <li>
+                <a href="https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">The dark art of drillhole desurveying, from the leapfrog3d blog</a>
+                (<a href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/">internet archive</a>)
+            </li>
+            <li><a href="http://home.btconnect.com/SiliconDale/silicon13.htm">Drillhole De-Surveying, from Steve Henley's blog</a>
+                (<a href="https://web.archive.org/web/20190628214612/http://home.btconnect.com/SiliconDale/silicon13.htm">internet archive</a>)
+            </li>
+        </ul>
+    <h2> <a href="https://github.com/endarthur/endarthur.github.io/issues/2">Comments</a></h3> -->
+    </div>
+  </body>
+  <script>
+    const params = new URLSearchParams(window.location.hash.substring(1));
+    let timer = params.get("timer") || 300;
+    let webhook =
+      params.get("webhook") ||
+      "https://webhook.site/7f7b3b7e-0b7a-4f0e-8b0a-5b6b6b6b6b6b";
+    let channelName = params.get(
+      "channel"
+    ) || "deadman";
+
+    const status = document.getElementById("status");
+    const start = document.getElementById("start");
+    const stop = document.getElementById("stop");
+    const reset = document.getElementById("reset");
+    const heartbeat = document.getElementById("heartbeat");
+
+    const channelElement = document.getElementById("channel");
+    channelElement.value = channelName;
+
+    const timerElement = document.getElementById("timer");
+    timerElement.value = timer;
+
+    const webhookElement = document.getElementById("webhook");
+    webhookElement.value = webhook;
+
+
+    const timeRemaining = document.getElementById("remaining-time");
+    const heartbeatCount = document.getElementById("heartbeat-count");
+    const heartbeatTime = document.getElementById("heartbeat-time");
+
+    let timeout;
+    let update;
+    let channel;
+
+    function updateTimer() {
+      timeRemaining.innerHTML = timer;
+      heartbeatCount.innerHTML = 0;
+      heartbeatTime.innerHTML = 0;
+      if(channel) {
+        channel.close();
+      }
+      channel = new BroadcastChannel(channelName);
+      channel.onmessage = (event) => {
+        sendHeartbeat(event);
+      };
+    }
+
+    function startTimer(status_msg="started") {
+      status.innerHTML = status_msg;
+      status.className = "running";
+      timeout = setTimeout(() => {
+        status.innerHTML = `Timeout reached, sending notification to ${webhook}`;
+        status.className = "timeout";
+        fetch(webhook, {
+          method: "POST",
+          body: JSON.stringify({
+            text: `Timeout reached for ${channelName}`,
+          }),
+        });
+      }, timer * 1000);
+      update = setInterval(() => {
+      heartbeatTime.innerHTML = parseInt(heartbeatTime.innerHTML) + 1;
+      timeRemaining.innerHTML = parseInt(timeRemaining.innerHTML) - 1;
+    }, 1000);
+    }
+
+    function stopTimer(status_msg="Stopped") {
+      clearTimeout(timeout);
+      clearInterval(update);
+      status.innerHTML = status_msg;
+      status.className = "stopped";
+    }
+
+    function resetTimer() {
+      stopTimer();
+      status.innerHTML = `Not started`;
+      updateTimer();
+    }
+
+    function sendHeartbeat(event) {
+      const data = event.data;
+      clearTimeout(timeout);
+      clearInterval(update);
+      if (data.stop) {
+        stopTimer("Stopped by heartbeat signal");
+        return;
+      }
+      timer = data.timer;
+      timeRemaining.innerHTML = timer;
+      startTimer(data.message);
+      heartbeatCount.innerHTML = parseInt(heartbeatCount.innerHTML) + 1;
+      heartbeatTime.innerHTML = 0;
+    }
+
+    function updateHeartBeatLink() {
+      const payload = {
+        data: {
+          timer: timer,
+          stop: false,
+          message: "Heartbeat",
+        },
+        channel: channelName,
+        target:"broadcast",
+        close: true,
+      }
+      heartbeat.href = `${window.location.origin}/tools/store.html#${encodeURIComponent(JSON.stringify(payload))}`;
+    }
+
+    function updateURL() {
+      const newParams = new URLSearchParams();
+      newParams.set("timer", timer);
+      newParams.set("webhook", webhook);
+      newParams.set("channel", channelName);
+      window.location.hash = newParams.toString();
+    }
+
+    function updateParameters(){
+      timer = timerElement.value;
+      webhook = webhookElement.value;
+      channelName = channelElement.value;
+      updateHeartBeatLink();
+      updateURL();
+    }
+
+    timerElement.addEventListener("change", updateParameters);
+    webhookElement.addEventListener("change", updateParameters);
+    channelElement.addEventListener("change", updateParameters);
+
+
+    start.addEventListener("click", e => startTimer());
+    stop.addEventListener("click", e => stopTimer());
+    reset.addEventListener("click", e => resetTimer());
+
+    if (params.has("start")) {
+      startTimer();
+    }
+
+    updateTimer();
+    updateHeartBeatLink();
+
+  </script>
+</html>
