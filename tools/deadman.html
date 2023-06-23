@@ -71,19 +71,19 @@
       <form>
         <p>
           <input type="text" id="webhook" value="https://example.com" />
-          <label for="webhook">webhook</label>
+          <label for="webhook">incoming webhook</label>
         </p>
           <p>
             <input type="text" id="channel" value="deadman" />
-            <label for="channel">channel</label>
+            <label for="channel">heartbeat channel</label>
         </p>
         <p>
           <input type="text" id="message" value="Deadman switch triggered" />
-          <label for="message">message</label>
+          <label for="message">message when triggered</label>
         </p>
         <p>
           <input type="text" id="timer" value="300" />
-          <label for="timer">time to trigger</label>
+          <label for="timer">seconds to trigger</label>
         </p>
       </form>
       <p><span id="remaining-time">0</span> seconds remaining</p>
@@ -184,7 +184,7 @@
           method: "POST",
           mode: "no-cors", // https://stackoverflow.com/questions/43262121/trying-to-use-fetch-and-pass-in-mode-no-cors
           body: JSON.stringify({
-            text: `Timeout reached for ${channelName}`,
+            text: message,
           }),
         });
       }, timer * 1000);
