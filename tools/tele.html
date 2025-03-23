@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insta360 Browser Control</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {--primary-color:#2c3e50;--secondary-color:#3498db;--accent-color:#e74c3c;--light-color:#ecf0f1;--dark-color:#2c3e50;--panel-bg:rgba(44,62,80,0.9);--panel-width:320px;}
+        * {margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;}
+        body {background-color:#000;color:var(--light-color);overflow:hidden;height:100vh;}
+        #videoContainer {position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;background-color:#000;display:flex;justify-content:center;align-items:center;}
+        #video {width:100%;height:100%;object-fit:contain;}
+        .video-status {position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background-color:rgba(0,0,0,0.7);color:white;padding:15px 25px;border-radius:8px;text-align:center;z-index:10;max-width:80%;}
+        #setup-panel {position:absolute;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,0.9);z-index:100;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px;}
+        .setup-container {background-color:var(--panel-bg);border-radius:10px;padding:30px;width:100%;max-width:500px;box-shadow:0 10px 20px rgba(0,0,0,0.3);}
+        .setup-container h1 {text-align:center;margin-bottom:25px;color:var(--light-color);}
+        #control-panel {position:absolute;top:0;right:0;width:var(--panel-width);height:100%;background-color:var(--panel-bg);z-index:20;transition:transform 0.3s ease;overflow-y:auto;box-shadow:-5px 0px 15px rgba(0,0,0,0.2);}
+        #control-panel.collapsed {transform:translateX(calc(var(--panel-width) - 40px));}
+        .panel-toggle {position:absolute;left:0;top:50%;transform:translateY(-50%);background-color:var(--panel-bg);color:var(--light-color);border:none;width:40px;height:80px;cursor:pointer;border-radius:8px 0 0 8px;display:flex;justify-content:center;align-items:center;font-size:20px;}
+        .panel-content {padding:20px;padding-left:50px;}
+        .panel-section {margin-bottom:25px;}
+        .panel-section h3 {margin-bottom:15px;color:var(--light-color);border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:8px;}
+        .joystick-container {position:relative;width:200px;height:200px;background-color:rgba(255,255,255,0.1);border-radius:50%;margin:0 auto 20px;border:2px solid rgba(255,255,255,0.3);}
+        .joystick-bounds {position:absolute;top:20px;left:20px;right:20px;bottom:20px;border-radius:50%;border:1px dashed rgba(255,255,255,0.2);pointer-events:none;}
+        .joystick-handle {width:60px;height:60px;background-color:var(--secondary-color);border-radius:50%;cursor:grab;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border:2px solid rgba(255,255,255,0.5);box-shadow:0 3px 10px rgba(0,0,0,0.3);}
+        .joystick-handle:active {cursor:grabbing;box-shadow:0 0 20px rgba(52,152,219,0.9);}
+        .joystick-crosshair {position:absolute;width:10px;height:10px;border-radius:50%;background-color:rgba(255,255,255,0.5);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+        .joystick-reset {position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);background-color:var(--secondary-color);color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;}
+        .zoom-control {padding:10px;}
+        .zoom-slider {width:100%;margin:10px 0;}
+        button {background-color:var(--secondary-color);color:white;border:none;padding:10px 15px;border-radius:5px;cursor:pointer;transition:background-color 0.3s;margin:5px;}
+        button:hover {background-color:#2980b9;}
+        button.accent {background-color:var(--accent-color);}
+        button.accent:hover {background-color:#c0392b;}
+        select, input {width:100%;padding:10px;margin:5px 0 15px;border-radius:5px;border:1px solid #ddd;background-color:var(--light-color);}
+        label {display:block;margin-top:10px;color:var(--light-color);}
+        .button-group {display:flex;justify-content:space-between;margin-top:10px;}
+        .connection-info {position:absolute;bottom:20px;left:20px;background-color:rgba(0,0,0,0.7);padding:10px 15px;border-radius:5px;z-index:15;}
+        .status-indicator {display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;}
+        .status-connected {background-color:#2ecc71;}
+        .status-connecting {background-color:#f39c12;}
+        .status-disconnected {background-color:#e74c3c;}
+        #debug-panel {position:absolute;bottom:0;left:0;background-color:rgba(0,0,0,0.8);max-width:80%;max-height:200px;overflow-y:auto;z-index:30;font-family:monospace;font-size:12px;padding:10px;border-top-right-radius:5px;transform:translateY(100%);transition:transform 0.3s ease;}
+        #debug-panel.visible {transform:translateY(0);}
+        .debug-toggle {position:absolute;bottom:0;left:0;background-color:rgba(0,0,0,0.7);color:white;border:none;padding:5px 10px;cursor:pointer;z-index:31;border-top-right-radius:5px;}
+        .modal-overlay {position:fixed;top:0;left:0;right:0;bottom:0;background-color:rgba(0,0,0,0.7);z-index:150;display:flex;justify-content:center;align-items:center;}
+        .modal-content {background-color:var(--panel-bg);border-radius:10px;padding:25px;width:90%;max-width:500px;box-shadow:0 5px 15px rgba(0,0,0,0.5);position:relative;}
+        .modal-close {position:absolute;top:10px;right:10px;background:none;border:none;color:white;font-size:20px;cursor:pointer;}
+        .modal-title {margin-bottom:20px;color:white;font-size:18px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.2);}
+        .link-container {position:relative;margin:25px 0;}
+        .link-display {width:100%;padding:12px;background-color:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:5px;color:white;font-family:monospace;margin-bottom:10px;white-space:nowrap;overflow-x:auto;}
+        .qr-code {display:flex;justify-content:center;margin:15px 0;}
+        .qr-code img {width:200px;height:200px;background-color:white;padding:10px;border-radius:5px;}
+        .copy-link-btn {width:100%;padding:12px;background-color:var(--secondary-color);color:white;border:none;border-radius:5px;cursor:pointer;font-size:16px;display:flex;justify-content:center;align-items:center;gap:10px;}
+        .copy-link-btn:hover {background-color:#2980b9;}
+        .coordinate-display {background-color:rgba(255,255,255,0.1);padding:8px 12px;border-radius:5px;text-align:center;margin-top:10px;font-family:monospace;}
+        @media (max-width:768px) {:root {--panel-width:260px;}.joystick-container {width:160px;height:160px;}.joystick-handle {width:50px;height:50px;}.setup-container {padding:20px;}}
+        .hidden {display:none !important;}
+        .spinner {display:inline-block;width:50px;height:50px;border:5px solid rgba(255,255,255,.3);border-radius:50%;border-top-color:var(--secondary-color);animation:spin 1s ease-in-out infinite;margin-bottom:15px;}
+        @keyframes spin {to {transform:rotate(360deg);}}
+        #force-play {position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:12;padding:15px 30px;font-size:18px;background-color:rgba(0,0,0,0.7);}
+        .keyboard-controls {background-color:rgba(0,0,0,0.6);border-radius:8px;padding:10px 15px;margin-top:20px;}
+        .keyboard-controls h4 {color:var(--light-color);margin-bottom:10px;font-size:14px;}
+        .keyboard-controls ul {list-style-type:none;padding:0;font-size:13px;}
+        .keyboard-controls li {margin-bottom:5px;}
+        .key {display:inline-block;background-color:rgba(255,255,255,0.2);padding:2px 6px;border-radius:4px;margin-right:5px;font-family:monospace;min-width:20px;text-align:center;}
+        .key-combo {display:inline-flex;align-items:center;}
+        .key-plus {margin:0 3px;color:rgba(255,255,255,0.6);}
+        .precision-mode {margin-top:12px;padding:8px;background-color:rgba(255,255,255,0.1);border-radius:6px;font-size:12px;line-height:1.4;}
+    </style>
+</head>
+<body>
+    <div id="videoContainer" class="hidden">
+        <div id="video-status" class="video-status">Waiting for connection...</div>
+        <video id="video" autoplay playsinline></video>
+        <button id="force-play" class="hidden"><i class="fas fa-play"></i> Tap to Play Video</button>
+    </div>
+
+    <div id="connection-status" class="connection-info hidden">
+        <span id="status-indicator" class="status-indicator status-disconnected"></span>
+        <span id="status">Not Connected</span>
+    </div>
+
+    <div id="control-panel" class="hidden collapsed">
+        <button id="panel-toggle" class="panel-toggle"><i class="fas fa-chevron-left"></i></button>
+        <div class="panel-content">
+            <div class="panel-section">
+                <h3>Camera Control</h3>
+                <div class="joystick-container">
+                    <div class="joystick-bounds"></div>
+                    <div class="joystick-crosshair"></div>
+                    <div class="joystick-handle" id="joystick-handle"></div>
+                    <button class="joystick-reset" id="joystick-reset"><i class="fas fa-crosshairs"></i> Center</button>
+                </div>
+                <div class="coordinate-display">Pan: <span id="pan-value">0.00</span> | Tilt: <span id="tilt-value">0.00</span></div>
+
+                <div class="panel-section">
+                    <h3>Zoom Control</h3>
+                    <div class="zoom-control">
+                        <div class="button-group">
+                            <button id="zoom-out"><i class="fas fa-search-minus"></i></button>
+                            <button id="zoom-in"><i class="fas fa-search-plus"></i></button>
+                        </div>
+                        <input type="range" id="zoom-slider" class="zoom-slider" min="100" max="500" step="10" value="100">
+                        <div class="coordinate-display">Zoom: <span id="zoom-value">100</span></div>
+                    </div>
+                </div>
+
+                <div class="keyboard-controls">
+                    <h4><i class="fas fa-keyboard"></i> Keyboard Controls</h4>
+                    <ul>
+                        <li><span class="key">W</span> Tilt Up</li>
+                        <li><span class="key">S</span> Tilt Down</li>
+                        <li><span class="key">A</span> Pan Left</li>
+                        <li><span class="key">D</span> Pan Right</li>
+                        <li><span class="key">Q</span> Zoom Out</li>
+                        <li><span class="key">E</span> Zoom In</li>
+                        <li><span class="key">Space</span> Center/Reset</li>
+                    </ul>
+                    <div class="precision-mode">
+                        <div class="key-combo">
+                            <span class="key">Shift</span>
+                            <span class="key-plus">+</span>
+                            <span class="key">W/A/S/D</span>
+                        </div>
+                        <span>Use for precision movement (0.2% increments)</span>
+                    </div>
+                </div>
+
+                <div id="ptz-support-message" class="hidden"><p><i class="fas fa-check-circle"></i> PTZ controls are supported</p></div>
+                <div id="ptz-unsupported-message" class="hidden"><p><i class="fas fa-exclamation-triangle"></i> PTZ controls not available</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="share-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close"><i class="fas fa-times"></i></button>
+            <h3 class="modal-title"><i class="fas fa-share-alt"></i> Share Camera Control</h3>
+            <p>Share this link with anyone who needs to control your camera:</p>
+            <div class="link-container">
+                <div class="link-display" id="modal-link-display"></div>
+                <button class="copy-link-btn" id="modal-copy-btn"><i class="fas fa-copy"></i> Copy Link</button>
+            </div>
+            <div class="qr-code" id="qr-code-container"></div>
+            <p><small>The link recipient can control your camera's pan, tilt, and zoom remotely.</small></p>
+        </div>
+    </div>
+
+    <div id="setup-panel">
+        <div class="setup-container">
+            <h1><i class="fas fa-video"></i> Insta360 Camera Control</h1>
+            <div class="control-group">
+                <label for="mode">Select Mode:</label>
+                <select id="mode">
+                    <option value="host">Host (Camera Side)</option>
+                    <option value="remote">Remote (Control Side)</option>
+                </select>
+            </div>
+
+            <div id="host-setup" class="control-group">
+                <h3>Host Setup</h3>
+                <div class="control-group">
+                    <label for="camera-select">Select Camera:</label>
+                    <select id="camera-select"><option value="">Loading cameras...</option></select>
+                    <div class="button-group">
+                        <button id="refresh-cameras"><i class="fas fa-sync"></i> Refresh</button>
+                        <button id="show-capabilities"><i class="fas fa-info-circle"></i> Capabilities</button>
+                    </div>
+                    <div id="capabilities-log" class="hidden"></div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Local Testing</h3>
+                    <button id="start-local-test" class="accent"><i class="fas fa-vial"></i> Test Camera Locally</button>
+                </div>
+
+                <div class="control-group">
+                    <h3>Remote Sharing</h3>
+                    <button id="generate-id"><i class="fas fa-broadcast-tower"></i> Start Sharing</button>
+                </div>
+            </div>
+
+            <div id="remote-setup" class="control-group hidden">
+                <h3>Remote Setup</h3>
+                <label for="host-id-input">Enter Host ID:</label>
+                <input type="text" id="host-id-input" placeholder="Enter the ID shared by the host">
+                <button id="connect-to-host" class="accent"><i class="fas fa-plug"></i> Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <button id="debug-toggle" class="debug-toggle"><i class="fas fa-bug"></i></button>
+    <div id="debug-panel"><div id="command-log">System ready...</div></div>
+
+    <script>
+        // Global variables
+        let peer, connection, localStream, call, videoTrack;
+        let isHost = true, isLocalTesting = false;
+        let hostId, remotePeerId;
+        let cameraCapabilities = {};
+        let lastPanValue = 0, lastTiltValue = 0, lastZoomValue = 100;
+        let joystickActive = false;
+        let panRange = {min:-1, max:1}, tiltRange = {min:-1, max:1}, zoomRange = {min:100, max:500};
+
+        // Steps for keyboard control - will be dynamically adjusted based on camera capabilities
+        let panStep = 0.01;  // 1% step
+        let tiltStep = 0.01; // 1% step
+        let zoomStep = 5;    // 5 units
+
+        // Precision mode with shift key (0.2% steps)
+        let panPrecisionStep = 0.002;  // 0.2% step
+        let tiltPrecisionStep = 0.002; // 0.2% step
+
+        // Joystick variables for relative movement
+        let joystickIntervalId = null;
+        let joystickDeltaX = 0;
+        let joystickDeltaY = 0;
+        const JOYSTICK_UPDATE_INTERVAL = 50; // ms
+        // const JOYSTICK_SPEED_FACTOR = 2000; // How fast the camera moves (increased from 0.02)
+
+        // Keyboard control and throttling variables
+        let keyPressedStates = {w:false, a:false, s:false, d:false, q:false, e:false, shift:false};
+        let lastCommandTime = 0, pendingCommand = null, isThrottlePending = false;
+        const THROTTLE_INTERVAL = 120; // milliseconds between commands
+
+        // DOM elements
+        const modeSelect = document.getElementById('mode');
+        const setupPanel = document.getElementById('setup-panel');
+        const hostSetup = document.getElementById('host-setup');
+        const remoteSetup = document.getElementById('remote-setup');
+        const cameraSelect = document.getElementById('camera-select');
+        const refreshCamerasBtn = document.getElementById('refresh-cameras');
+        const showCapabilitiesBtn = document.getElementById('show-capabilities');
+        const capabilitiesLog = document.getElementById('capabilities-log');
+        const generateIdBtn = document.getElementById('generate-id');
+        const startLocalTestBtn = document.getElementById('start-local-test');
+        const videoContainer = document.getElementById('videoContainer');
+        const videoStatus = document.getElementById('video-status');
+        const video = document.getElementById('video');
+        const forcePlayBtn = document.getElementById('force-play');
+        const controlPanel = document.getElementById('control-panel');
+        const panelToggle = document.getElementById('panel-toggle');
+        const connectionStatus = document.getElementById('connection-status');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusSpan = document.getElementById('status');
+        const ptzSupportMessage = document.getElementById('ptz-support-message');
+        const ptzUnsupportedMessage = document.getElementById('ptz-unsupported-message');
+        const commandLog = document.getElementById('command-log');
+        const debugPanel = document.getElementById('debug-panel');
+        const debugToggle = document.getElementById('debug-toggle');
+        const connectToHostBtn = document.getElementById('connect-to-host');
+        const hostIdInput = document.getElementById('host-id-input');
+        const shareModal = document.getElementById('share-modal');
+        const modalClose = document.getElementById('modal-close');
+        const modalLinkDisplay = document.getElementById('modal-link-display');
+        const modalCopyBtn = document.getElementById('modal-copy-btn');
+        const qrCodeContainer = document.getElementById('qr-code-container');
+        const joystickHandle = document.getElementById('joystick-handle');
+        const joystickContainer = document.querySelector('.joystick-container');
+        const joystickReset = document.getElementById('joystick-reset');
+        const zoomInBtn = document.getElementById('zoom-in');
+        const zoomOutBtn = document.getElementById('zoom-out');
+        const zoomSlider = document.getElementById('zoom-slider');
+        const panValue = document.getElementById('pan-value');
+        const tiltValue = document.getElementById('tilt-value');
+        const zoomValue = document.getElementById('zoom-value');
+
+        // Throttle function to limit command rate
+        function throttleCommand(command, value) {
+            const now = Date.now();
+
+            // Update UI immediately for responsiveness
+            updateValueDisplay(command, value);
+
+            // Store latest command
+            pendingCommand = {command, value};
+
+            if (!isThrottlePending && now - lastCommandTime >= THROTTLE_INTERVAL) {
+                executePendingCommand();
+            } else if (!isThrottlePending) {
+                isThrottlePending = true;
+                setTimeout(executePendingCommand, THROTTLE_INTERVAL - (now - lastCommandTime));
+            }
+        }
+
+        // Execute most recent pending command
+        function executePendingCommand() {
+            if (pendingCommand) {
+                const {command, value} = pendingCommand;
+
+                // Execute camera control
+                if (isLocalTesting || isHost) {
+                    applyLocalCameraControl(command, value);
+                }
+
+                if (!isLocalTesting && connection && connection.open) {
+                    connection.send({
+                        type: 'camera-control',
+                        command: command,
+                        value: value
+                    });
+                }
+
+                lastCommandTime = Date.now();
+                pendingCommand = null;
+                isThrottlePending = false;
+            }
+        }
+
+        // Update UI values
+        function updateValueDisplay(command, value) {
+            if (command === 'pan-set') {
+                lastPanValue = value;
+                panValue.textContent = value.toFixed(2);
+            } else if (command === 'tilt-set') {
+                lastTiltValue = value;
+                tiltValue.textContent = value.toFixed(2);
+            } else if (command === 'zoom') {
+                lastZoomValue = value;
+                zoomValue.textContent = value;
+                zoomSlider.value = value;
+            }
+        }
+
+        // Setup keyboard controls
+        function setupKeyboardControls() {
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            setInterval(processKeyboardInput, 100);
+        }
+
+        function handleKeyDown(e) {
+            // Skip if typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            const key = e.key.toLowerCase();
+
+            // Handle shift key for precision mode
+            if (key === 'shift') {
+                keyPressedStates.shift = true;
+                return;
+            }
+
+            if (keyPressedStates.hasOwnProperty(key)) {
+                keyPressedStates[key] = true;
+                e.preventDefault();
+            } else if (key === ' ') {
+                centerJoystick();
+                e.preventDefault();
+            }
+        }
+
+        function handleKeyUp(e) {
+            const key = e.key.toLowerCase();
+
+            // Handle shift key for precision mode
+            if (key === 'shift') {
+                keyPressedStates.shift = false;
+                return;
+            }
+
+            if (keyPressedStates.hasOwnProperty(key)) {
+                keyPressedStates[key] = false;
+            }
+        }
+
+        function processKeyboardInput() {
+            // Use precision steps if shift is pressed
+            const currentPanStep = keyPressedStates.shift ? panPrecisionStep : panStep;
+            const currentTiltStep = keyPressedStates.shift ? tiltPrecisionStep : tiltStep;
+
+            // Pan control (A/D)
+            if (keyPressedStates.a && !keyPressedStates.d) {
+                const newValue = Math.max(panRange.min, lastPanValue - currentPanStep);
+                throttleCommand('pan-set', newValue);
+            } else if (keyPressedStates.d && !keyPressedStates.a) {
+                const newValue = Math.min(panRange.max, lastPanValue + currentPanStep);
+                throttleCommand('pan-set', newValue);
+            }
+
+            // Tilt control (W/S)
+            if (keyPressedStates.w && !keyPressedStates.s) {
+                const newValue = Math.min(tiltRange.max, lastTiltValue + currentTiltStep);
+                throttleCommand('tilt-set', newValue);
+            } else if (keyPressedStates.s && !keyPressedStates.w) {
+                const newValue = Math.max(tiltRange.min, lastTiltValue - currentTiltStep);
+                throttleCommand('tilt-set', newValue);
+            }
+
+            // Zoom control (Q/E)
+            if (keyPressedStates.q && !keyPressedStates.e) {
+                const newValue = Math.max(zoomRange.min, lastZoomValue - zoomStep);
+                throttleCommand('zoom', newValue);
+            } else if (keyPressedStates.e && !keyPressedStates.q) {
+                const newValue = Math.min(zoomRange.max, lastZoomValue + zoomStep);
+                throttleCommand('zoom', newValue);
+            }
+        }
+
+        // Close modal
+        modalClose.addEventListener('click', () => {
+            shareModal.classList.add('hidden');
+        });
+
+        // Copy link from modal
+        modalCopyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(modalLinkDisplay.textContent)
+                .then(() => {
+                    const originalText = modalCopyBtn.innerHTML;
+                    modalCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    setTimeout(() => modalCopyBtn.innerHTML = originalText, 2000);
+                })
+                .catch(err => alert('Failed to copy link to clipboard'));
+        });
+
+        // Debug panel toggle
+        debugToggle.addEventListener('click', () => debugPanel.classList.toggle('visible'));
+
+        // Panel toggle
+        panelToggle.addEventListener('click', () => {
+            controlPanel.classList.toggle('collapsed');
+            panelToggle.innerHTML = controlPanel.classList.contains('collapsed') ? 
+                '<i class="fas fa-chevron-right"></i>' : '<i class="fas fa-chevron-left"></i>';
+        });
+
+        // Check for host ID in URL fragment
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.location.hash) {
+                const hashId = window.location.hash.substring(1);
+                if (hashId) {
+                    modeSelect.value = 'remote';
+                    isHost = false;
+                    hostSetup.classList.add('hidden');
+                    remoteSetup.classList.remove('hidden');
+                    hostIdInput.value = hashId;
+                }
+            }
+        });
+
+        // Force play button
+        forcePlayBtn.addEventListener('click', () => {
+            video.play().then(() => {
+                forcePlayBtn.classList.add('hidden');
+                logCommand('Video playback started manually');
+            }).catch(e => logCommand('Failed to force play: ' + e.message));
+        });
+
+        // Helper to log commands
+        function logCommand(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            commandLog.innerHTML = `[${timestamp}] ${message}<br>` + commandLog.innerHTML;
+            if (commandLog.innerHTML.length > 5000) {
+                commandLog.innerHTML = commandLog.innerHTML.substring(0, 4000);
+            }
+        }
+
+        // Check if object is empty
+        function isObjectEmpty(obj) {
+            return Object.keys(obj).length === 0;
+        }
+
+        // Update connection status
+        function updateStatus(message, status = 'disconnected') {
+            statusSpan.textContent = message;
+            connectionStatus.classList.remove('hidden');
+            statusIndicator.className = 'status-indicator';
+            statusIndicator.classList.add('status-' + status);
+            logCommand(`Status: ${message}`);
+        }
+
+        // Generate QR code
+        function generateQRCode(text) {
+            try {
+                const qr = qrcode(0, 'M');
+                qr.addData(text);
+                qr.make();
+                const qrImg = qr.createImgTag(6);
+                qrCodeContainer.innerHTML = qrImg;
+                const img = qrCodeContainer.querySelector('img');
+                if (img) {
+                    img.style.backgroundColor = 'white';
+                    img.style.padding = '10px';
+                    img.style.borderRadius = '5px';
+                }
+            } catch (e) {
+                const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(text)}`;
+                qrCodeContainer.innerHTML = `<img src="${qrUrl}" alt="QR Code" style="background-color:white; padding:10px; border-radius:5px;">`;
+            }
+        }
+
+        // Show share modal
+        function showShareModal(linkText) {
+            modalLinkDisplay.textContent = linkText;
+            generateQRCode(linkText);
+            shareModal.classList.remove('hidden');
+        }
+
+        // Load cameras
+        function loadCameras() {
+            cameraSelect.innerHTML = '<option value="">Loading cameras...</option>';
+            navigator.mediaDevices.getUserMedia({
+                video: { pan: true, tilt: true, zoom: true }
+            })
+            .then(stream => {
+                stream.getTracks().forEach(track => track.stop());
+                return navigator.mediaDevices.enumerateDevices();
+            })
+            .then(devices => {
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                cameraSelect.innerHTML = '';
+                if (videoDevices.length === 0) {
+                    cameraSelect.innerHTML = '<option value="">No cameras found</option>';
+                } else {
+                    videoDevices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+                        cameraSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(err => {
+                cameraSelect.innerHTML = '<option value="">Error loading cameras</option>';
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        stream.getTracks().forEach(track => track.stop());
+                        return navigator.mediaDevices.enumerateDevices();
+                    })
+                    .then(devices => {
+                        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                        cameraSelect.innerHTML = '';
+                        if (videoDevices.length === 0) {
+                            cameraSelect.innerHTML = '<option value="">No cameras found</option>';
+                        } else {
+                            videoDevices.forEach(device => {
+                                const option = document.createElement('option');
+                                option.value = device.deviceId;
+                                option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+                                cameraSelect.appendChild(option);
+                            });
+                        }
+                    });
+            });
+        }
+
+        // Initial camera loading
+        loadCameras();
+
+        // Refresh cameras button
+        refreshCamerasBtn.addEventListener('click', loadCameras);
+
+        // Start local camera test
+        startLocalTestBtn.addEventListener('click', () => {
+            isLocalTesting = true;
+            startCamera();
+        });
+
+        // Show camera capabilities
+        showCapabilitiesBtn.addEventListener('click', () => {
+            const selectedDeviceId = cameraSelect.value;
+            if (!selectedDeviceId) {
+                alert('Please select a camera first');
+                return;
+            }
+
+            capabilitiesLog.innerHTML = 'Loading capabilities...';
+            capabilitiesLog.classList.remove('hidden');
+
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    deviceId: { exact: selectedDeviceId },
+                    pan: true, tilt: true, zoom: true
+                }
+            }).then(stream => {
+                const videoTrack = stream.getVideoTracks()[0];
+
+                if (typeof videoTrack.getCapabilities === 'function') {
+                    const capabilities = videoTrack.getCapabilities();
+                    cameraCapabilities = capabilities;
+
+                    capabilitiesLog.innerHTML = '<strong>Camera Capabilities:</strong><br>';
+                    capabilitiesLog.innerHTML += JSON.stringify(capabilities, null, 2)
+                        .replace(/\n/g, '<br>')
+                        .replace(/ /g, '&nbsp;');
+
+                    const hasPTZ = capabilities.pan || capabilities.tilt || capabilities.zoom;
+                    capabilitiesLog.innerHTML += '<br><br><strong>PTZ Support: ' + (hasPTZ ? 'YES' : 'NO') + '</strong>';
+
+                    if (hasPTZ) {
+                        capabilitiesLog.innerHTML += '<br>Supported controls: ';
+                        if (capabilities.pan) capabilitiesLog.innerHTML += 'Pan ';
+                        if (capabilities.tilt) capabilitiesLog.innerHTML += 'Tilt ';
+                        if (capabilities.zoom) capabilitiesLog.innerHTML += 'Zoom ';
+                    }
+                } else {
+                    capabilitiesLog.innerHTML = 'This browser does not support getCapabilities()';
+                }
+
+                stream.getTracks().forEach(track => track.stop());
+            }).catch(err => {
+                capabilitiesLog.innerHTML = 'Error accessing camera: ' + err.message;
+            });
+        });
+
+        // Adjust controls based on capabilities
+        function adjustControlsBasedOnCapabilities(capabilities) {
+            if (capabilities.pan) {
+                panRange.min = capabilities.pan.min;
+                panRange.max = capabilities.pan.max;
+                lastPanValue = (capabilities.pan.min + capabilities.pan.max) / 2;
+                panValue.textContent = lastPanValue.toFixed(2);
+                // Calculate pan step as 1% of total range
+                panStep = (capabilities.pan.max - capabilities.pan.min) * 0.01;
+                // Precision mode: 0.2% of total range
+                panPrecisionStep = (capabilities.pan.max - capabilities.pan.min) * 0.002;
+                logCommand(`Pan steps set to ${panStep.toFixed(4)} / ${panPrecisionStep.toFixed(4)} (precision)`);
+            }
+
+            if (capabilities.tilt) {
+                tiltRange.min = capabilities.tilt.min;
+                tiltRange.max = capabilities.tilt.max;
+                lastTiltValue = (capabilities.tilt.min + capabilities.tilt.max) / 2;
+                tiltValue.textContent = lastTiltValue.toFixed(2);
+                // Calculate tilt step as 1% of total range
+                tiltStep = (capabilities.tilt.max - capabilities.tilt.min) * 0.01;
+                // Precision mode: 0.2% of total range
+                tiltPrecisionStep = (capabilities.tilt.max - capabilities.tilt.min) * 0.002;
+                logCommand(`Tilt steps set to ${tiltStep.toFixed(4)} / ${tiltPrecisionStep.toFixed(4)} (precision)`);
+            }
+
+            if (capabilities.zoom) {
+                zoomRange.min = capabilities.zoom.min;
+                zoomRange.max = capabilities.zoom.max;
+                zoomSlider.min = capabilities.zoom.min;
+                zoomSlider.max = capabilities.zoom.max;
+                zoomSlider.step = capabilities.zoom.step || 1;
+                zoomSlider.value = lastZoomValue = capabilities.zoom.min;
+                zoomValue.textContent = lastZoomValue;
+                // Calculate zoom step as 1% of total range
+                zoomStep = Math.max(1, Math.round((capabilities.zoom.max - capabilities.zoom.min) * 0.01));
+                logCommand(`Zoom step set to ${zoomStep}`);
+            }
+        }
+
+        // Mode selection
+        modeSelect.addEventListener('change', () => {
+            isHost = modeSelect.value === 'host';
+            hostSetup.classList.toggle('hidden', !isHost);
+            remoteSetup.classList.toggle('hidden', isHost);
+        });
+
+        // Generate host ID
+        generateIdBtn.addEventListener('click', () => {
+            if (isLocalTesting && localStream) {
+                setupPeerConnection();
+            } else {
+                startCamera(true);
+            }
+        });
+
+        // Set up peer connection
+        function setupPeerConnection() {
+            peer = new Peer();
+
+            peer.on('open', (id) => {
+                hostId = id;
+                const currentUrl = window.location.href.split('#')[0];
+                const shareableLink = `${currentUrl}#${id}`;
+                logCommand('Host ID generated: ' + id);
+                showShareModal(shareableLink);
+                updateStatus('Waiting for connection...', 'connecting');
+            });
+
+            peer.on('connection', (conn) => {
+                connection = conn;
+                remotePeerId = conn.peer;
+                logCommand('Received data connection from peer: ' + remotePeerId);
+                setupDataConnection();
+            });
+
+            peer.on('error', (err) => {
+                console.error('PeerJS error:', err);
+                updateStatus('Error: ' + err.type, 'disconnected');
+            });
+        }
+
+        // Connect to host
+        connectToHostBtn.addEventListener('click', () => {
+            const peerId = hostIdInput.value.trim();
+            if (!peerId) {
+                alert('Please enter a valid host ID');
+                return;
+            }
+
+            connectToHostBtn.disabled = true;
+            connectToHostBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
+
+            setupPanel.classList.add('hidden');
+            videoContainer.classList.remove('hidden');
+            connectionStatus.classList.remove('hidden');
+            videoStatus.textContent = 'Connecting to host...';
+            updateStatus('Initiating connection...', 'connecting');
+
+            peer = new Peer();
+
+            peer.on('open', (id) => {
+                remotePeerId = id;
+                connection = peer.connect(peerId);
+                setupDataConnection();
+
+                peer.on('call', (incomingCall) => {
+                    call = incomingCall;
+                    videoStatus.textContent = 'Receiving video feed...';
+                    logCommand('Received video call from host');
+
+                    call.answer();
+
+                    call.on('stream', (remoteStream) => {
+                        logCommand(`Received stream with ${remoteStream.getTracks().length} tracks`);
+                        videoStatus.textContent = 'Setting up video...';
+                        video.srcObject = remoteStream;
+                        video.setAttribute('playsinline', 'playsinline');
+                        video.setAttribute('autoplay', 'autoplay');
+
+                        video.onloadedmetadata = () => {
+                            logCommand(`Video ready: ${video.videoWidth}x${video.videoHeight}`);
+                            let playPromise = video.play();
+
+                            if (playPromise !== undefined) {
+                                playPromise.then(() => {
+                                    logCommand('Video playing successfully');
+                                    videoStatus.classList.add('hidden');
+                                    updateStatus('Connected', 'connected');
+                                    controlPanel.classList.remove('hidden');
+                                }).catch(e => {
+                                    logCommand('Auto-play was prevented: ' + e.message);
+                                    videoStatus.textContent = 'Tap play to start video';
+                                    forcePlayBtn.classList.remove('hidden');
+                                });
+                            } else {
+                                videoStatus.classList.add('hidden');
+                            }
+                        };
+
+                        video.onerror = (e) => {
+                            logCommand('Video error: ' + (video.error ? video.error.message : e));
+                            videoStatus.textContent = 'Video error occurred';
+                            updateStatus('Video error', 'disconnected');
+                        };
+                    });
+
+                    call.on('error', (err) => {
+                        console.error('Call error:', err);
+                        videoStatus.textContent = 'Video call error';
+                        updateStatus('Call error', 'disconnected');
+                    });
+
+                    call.on('close', () => {
+                        logCommand('Video call closed');
+                        videoStatus.textContent = 'Video call ended';
+                        videoStatus.classList.remove('hidden');
+                        updateStatus('Disconnected', 'disconnected');
+                    });
+                });
+            });
+
+            peer.on('error', (err) => {
+                console.error('PeerJS error:', err);
+                updateStatus('Connection error', 'disconnected');
+                videoStatus.textContent = 'Failed to connect: ' + err.type;
+                connectToHostBtn.disabled = false;
+                connectToHostBtn.innerHTML = '<i class="fas fa-plug"></i> Connect';
+            });
+        });
+
+        // Start camera
+        function startCamera(forPeerConnection = false) {
+            const selectedDeviceId = cameraSelect.value;
+            if (!selectedDeviceId) {
+                alert('Please select a camera first');
+                return;
+            }
+
+            const constraints = {
+                video: {
+                    deviceId: { exact: selectedDeviceId },
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    pan: true, tilt: true, zoom: true
+                },
+                audio: false
+            };
+
+            setupPanel.classList.add('hidden');
+            videoContainer.classList.remove('hidden');
+            videoStatus.textContent = 'Starting camera...';
+            connectionStatus.classList.remove('hidden');
+            updateStatus('Accessing camera...', 'connecting');
+
+            navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => {
+                localStream = stream;
+                videoTrack = stream.getVideoTracks()[0];
+                logCommand(`Camera started: ${videoTrack.label}`);
+
+                video.srcObject = stream;
+                videoStatus.classList.add('hidden');
+                controlPanel.classList.remove('hidden');
+                setupKeyboardControls();
+
+                if (isLocalTesting) {
+                    updateStatus('Local testing active', 'connected');
+                }
+
+                if (typeof videoTrack.getCapabilities === 'function') {
+                    const capabilities = videoTrack.getCapabilities();
+                    cameraCapabilities = capabilities;
+
+                    const hasPTZ = capabilities.pan || capabilities.tilt || capabilities.zoom;
+
+                    if (hasPTZ) {
+                        ptzSupportMessage.classList.remove('hidden');
+                        ptzUnsupportedMessage.classList.add('hidden');
+                        logCommand('PTZ is supported');
+                    } else {
+                        ptzSupportMessage.classList.add('hidden');
+                        ptzUnsupportedMessage.classList.remove('hidden');
+                        logCommand('PTZ is NOT supported');
+                    }
+
+                    adjustControlsBasedOnCapabilities(capabilities);
+                }
+
+                if (forPeerConnection) {
+                    setupPeerConnection();
+                }
+            })
+            .catch(err => {
+                console.error('Failed to get camera stream:', err);
+                updateStatus('Camera error', 'disconnected');
+                videoStatus.textContent = 'Camera error: ' + err.message;
+
+                if (err.name === 'OverconstrainedError' || err.name === 'NotFoundError') {
+                    const basicConstraints = {
+                        video: { deviceId: { exact: selectedDeviceId } },
+                        audio: false
+                    };
+
+                    updateStatus('Retrying without PTZ...', 'connecting');
+                    videoStatus.textContent = 'Retrying without PTZ...';
+
+                    navigator.mediaDevices.getUserMedia(basicConstraints)
+                    .then(stream => {
+                        localStream = stream;
+                        videoTrack = stream.getVideoTracks()[0];
+                        video.srcObject = stream;
+                        videoStatus.classList.add('hidden');
+                        controlPanel.classList.remove('hidden');
+                        setupKeyboardControls();
+
+                        ptzSupportMessage.classList.add('hidden');
+                        ptzUnsupportedMessage.classList.remove('hidden');
+                        logCommand('Camera accessed without PTZ');
+
+                        if (isLocalTesting) {
+                            updateStatus('Local testing (no PTZ)', 'connected');
+                        }
+
+                        if (forPeerConnection) {
+                            setupPeerConnection();
+                        }
+                    })
+                    .catch(fallbackErr => {
+                        console.error('Fallback camera access failed:', fallbackErr);
+                        updateStatus('Camera access failed', 'disconnected');
+                        videoStatus.textContent = 'Cannot access camera: ' + fallbackErr.message;
+                        setupPanel.classList.remove('hidden');
+                    });
+                } else {
+                    setupPanel.classList.remove('hidden');
+                }
+            });
+        }
+
+        // Setup data connection
+        function setupDataConnection() {
+            if (!connection) return;
+
+            connection.on('open', () => {
+                updateStatus('Connected', 'connected');
+
+                if (!isHost) {
+                    controlPanel.classList.remove('hidden');
+                    videoStatus.textContent = 'Requesting video...';
+                    setupKeyboardControls();
+                    connection.send({ type: 'request-video' });
+                } else {
+                    logCommand('Remote connected, waiting for video request');
+                }
+
+                if (isHost && videoTrack) {
+                    if (typeof videoTrack.getCapabilities === 'function') {
+                        const capabilities = videoTrack.getCapabilities();
+
+                        if (!isObjectEmpty(capabilities) && 
+                            (capabilities.pan || capabilities.tilt || capabilities.zoom)) {
+
+                            connection.send({
+                                type: 'camera-capabilities',
+                                capabilities: {
+                                    pan: capabilities.pan,
+                                    tilt: capabilities.tilt,
+                                    zoom: capabilities.zoom
+                                }
+                            });
+                            logCommand('Sent camera capabilities');
+                        }
+                    }
+                }
+            });
+
+            connection.on('data', (data) => {
+                if (data.type === 'camera-control') {
+                    handleReceivedCommand(data);
+                }
+                else if (data.type === 'camera-capabilities' && !isHost) {
+                    logCommand('Received camera capabilities');
+
+                    if (data.capabilities.pan) {
+                        panRange.min = data.capabilities.pan.min;
+                        panRange.max = data.capabilities.pan.max;
+                        lastPanValue = (data.capabilities.pan.min + data.capabilities.pan.max) / 2;
+                        panValue.textContent = lastPanValue.toFixed(2);
+                        // Calculate pan step as 1% of total range
+                        panStep = (data.capabilities.pan.max - data.capabilities.pan.min) * 0.01;
+                        // Precision mode: 0.2% of total range
+                        panPrecisionStep = (data.capabilities.pan.max - data.capabilities.pan.min) * 0.002;
+                        logCommand(`Pan steps set to ${panStep.toFixed(4)} / ${panPrecisionStep.toFixed(4)} (precision)`);
+                    }
+
+                    if (data.capabilities.tilt) {
+                        tiltRange.min = data.capabilities.tilt.min;
+                        tiltRange.max = data.capabilities.tilt.max;
+                        lastTiltValue = (data.capabilities.tilt.min + data.capabilities.tilt.max) / 2;
+                        tiltValue.textContent = lastTiltValue.toFixed(2);
+                        // Calculate tilt step as 1% of total range
+                        tiltStep = (data.capabilities.tilt.max - data.capabilities.tilt.min) * 0.01;
+                        // Precision mode: 0.2% of total range 
+                        tiltPrecisionStep = (data.capabilities.tilt.max - data.capabilities.tilt.min) * 0.002;
+                        logCommand(`Tilt steps set to ${tiltStep.toFixed(4)} / ${tiltPrecisionStep.toFixed(4)} (precision)`);
+                    }
+
+                    if (data.capabilities.zoom) {
+                        zoomRange.min = data.capabilities.zoom.min;
+                        zoomRange.max = data.capabilities.zoom.max;
+                        zoomSlider.min = data.capabilities.zoom.min;
+                        zoomSlider.max = data.capabilities.zoom.max;
+                        zoomSlider.step = data.capabilities.zoom.step || 1;
+                        zoomSlider.value = lastZoomValue = data.capabilities.zoom.min;
+                        zoomValue.textContent = lastZoomValue;
+                        // Calculate zoom step as 1% of total range
+                        zoomStep = Math.max(1, Math.round((data.capabilities.zoom.max - data.capabilities.zoom.min) * 0.01));
+                        logCommand(`Zoom step set to ${zoomStep}`);
+                    }
+
+                    const hasPTZ = data.capabilities.pan || data.capabilities.tilt || data.capabilities.zoom;
+                    if (hasPTZ) {
+                        ptzSupportMessage.classList.remove('hidden');
+                        ptzUnsupportedMessage.classList.add('hidden');
+                    } else {
+                        ptzSupportMessage.classList.add('hidden');
+                        ptzUnsupportedMessage.classList.remove('hidden');
+                    }
+                }
+                else if (data.type === 'request-video' && isHost) {
+                    logCommand('Received video request, initiating call');
+
+                    if (localStream) {
+                        call = peer.call(remotePeerId, localStream);
+
+                        call.on('stream', () => {
+                            logCommand('Call connected (stream event)');
+                        });
+
+                        call.on('error', (err) => {
+                            console.error('Call error:', err);
+                            logCommand('Call error: ' + err);
+                        });
+
+                        call.on('close', () => {
+                            logCommand('Call closed');
+                        });
+
+                        updateStatus('Streaming video', 'connected');
+                    } else {
+                        logCommand('ERROR: No local stream available');
+                        connection.send({
+                            type: 'error',
+                            message: 'Host camera not available'
+                        });
+                    }
+                }
+            });
+
+            connection.on('close', () => {
+                updateStatus('Disconnected', 'disconnected');
+
+                if (!isLocalTesting) {
+                    videoStatus.textContent = 'Connection closed';
+                    videoStatus.classList.remove('hidden');
+                }
+            });
+
+            connection.on('error', (err) => {
+                console.error('Connection error:', err);
+                updateStatus('Connection error', 'disconnected');
+            });
+        }
+
+        // Apply local camera control
+        function applyLocalCameraControl(command, value) {
+            if (!videoTrack) return;
+
+            try {
+                // Update cached values
+                if (command === 'pan-set') lastPanValue = value;
+                else if (command === 'tilt-set') lastTiltValue = value;
+                else if (command === 'zoom') lastZoomValue = value;
+
+                // Apply constraint
+                switch (command) {
+                    case 'pan-set':
+                    case 'tilt-set':
+                        videoTrack.applyConstraints({
+                            advanced: [{ pan: lastPanValue, tilt: lastTiltValue }]
+                        }).catch(e => console.error('Pan/tilt constraint error:', e));
+                        break;
+
+                    case 'zoom':
+                        videoTrack.applyConstraints({
+                            advanced: [{ zoom: value }]
+                        }).catch(e => console.error('Zoom constraint error:', e));
+                        break;
+                }
+            } catch (err) {
+                console.error('Error applying constraint:', err);
+            }
+        }
+
+        // Camera control function - uses throttling
+        function sendCameraCommand(command, value = null) {
+            throttleCommand(command, value);
+        }
+
+        // Handle received commands (host side)
+        function handleReceivedCommand(data) {
+            if (!isHost || !data || data.type !== 'camera-control') return;
+            applyLocalCameraControl(data.command, data.value);
+        }
+
+// Remove the fixed JOYSTICK_SPEED_FACTOR and replace the processJoystickMovement function with this:
+
+function processJoystickMovement() {
+    if (joystickDeltaX !== 0 || joystickDeltaY !== 0) {
+        // Calculate the total range for pan and tilt
+        const panTotalRange = panRange.max - panRange.min;
+        const tiltTotalRange = tiltRange.max - tiltRange.min;
+
+        // Use 5% of total range when joystick is at full displacement
+        const MAX_PERCENT_PER_INTERVAL = 0.02; // 5% of range per update interval
+
+        // Calculate actual movement based on joystick position and range
+        const panDelta = joystickDeltaX * panTotalRange * MAX_PERCENT_PER_INTERVAL;
+        const tiltDelta = joystickDeltaY * tiltTotalRange * MAX_PERCENT_PER_INTERVAL;
+
+        // Apply the deltas to current position
+        const newPanValue = Math.max(panRange.min, Math.min(panRange.max, lastPanValue + panDelta));
+        const newTiltValue = Math.max(tiltRange.min, Math.min(tiltRange.max, lastTiltValue + tiltDelta));
+
+        // Only send commands if values actually changed
+        if (newPanValue !== lastPanValue) {
+            sendCameraCommand('pan-set', newPanValue);
+        }
+
+        if (newTiltValue !== lastTiltValue) {
+            sendCameraCommand('tilt-set', newTiltValue);
+        }
+    }
+}
+
+
+        // Initialize joystick
+        function initJoystick() {
+            joystickContainer.addEventListener('mousedown', startJoystickDrag);
+            joystickContainer.addEventListener('touchstart', startJoystickDrag, { passive: false });
+            joystickReset.addEventListener('click', centerJoystick);
+        }
+
+        function startJoystickDrag(e) {
+            e.preventDefault();
+            joystickActive = true;
+
+            joystickHandle.style.cursor = 'grabbing';
+            document.body.style.cursor = 'grabbing';
+            joystickHandle.style.transition = 'none';
+
+            updateJoystickPosition(e);
+
+            // Start the movement interval
+            if (joystickIntervalId === null) {
+                joystickIntervalId = setInterval(processJoystickMovement, JOYSTICK_UPDATE_INTERVAL);
+            }
+
+            document.addEventListener('mousemove', updateJoystickPosition);
+            document.addEventListener('touchmove', updateJoystickPosition, { passive: false });
+            document.addEventListener('mouseup', endJoystickDrag);
+            document.addEventListener('touchend', endJoystickDrag);
+        }
+
+        function updateJoystickPosition(e) {
+            if (!joystickActive) return;
+
+            e.preventDefault();
+
+            const rect = joystickContainer.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const maxRadius = (rect.width / 2) - 30;
+
+            let clientX, clientY;
+            if (e.type.includes('touch')) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            let deltaX = clientX - (rect.left + centerX);
+            let deltaY = clientY - (rect.top + centerY);
+
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            if (distance > maxRadius) {
+                const scale = maxRadius / distance;
+                deltaX *= scale;
+                deltaY *= scale;
+            }
+
+            const handleX = centerX + deltaX;
+            const handleY = centerY + deltaY;
+
+            joystickHandle.style.left = `${handleX}px`;
+            joystickHandle.style.top = `${handleY}px`;
+
+            // Store normalized joystick displacement for the movement process
+            joystickDeltaX = deltaX / maxRadius;
+            joystickDeltaY = -deltaY / maxRadius;  // Invert Y for tilt
+        }
+
+        function endJoystickDrag() {
+            if (!joystickActive) return;
+
+            joystickActive = false;
+            joystickHandle.style.cursor = 'grab';
+            document.body.style.cursor = 'default';
+
+            // Return joystick to center visually
+            joystickHandle.style.transition = 'all 0.3s ease';
+            joystickHandle.style.left = '50%';
+            joystickHandle.style.top = '50%';
+
+            // Stop the movement
+            joystickDeltaX = 0;
+            joystickDeltaY = 0;
+
+            // Clear the interval
+            if (joystickIntervalId !== null) {
+                clearInterval(joystickIntervalId);
+                joystickIntervalId = null;
+            }
+
+            document.removeEventListener('mousemove', updateJoystickPosition);
+            document.removeEventListener('touchmove', updateJoystickPosition);
+            document.removeEventListener('mouseup', endJoystickDrag);
+            document.removeEventListener('touchend', endJoystickDrag);
+        }
+
+        function centerJoystick() {
+            joystickHandle.style.transition = 'all 0.3s ease';
+            joystickHandle.style.left = '50%';
+            joystickHandle.style.top = '50%';
+
+            // Stop any ongoing movement
+            joystickDeltaX = 0;
+            joystickDeltaY = 0;
+
+            // Center pan/tilt
+            if (cameraCapabilities.pan) {
+                const centerPan = (panRange.min + panRange.max) / 2;
+                sendCameraCommand('pan-set', centerPan);
+            }
+
+            if (cameraCapabilities.tilt) {
+                const centerTilt = (tiltRange.min + tiltRange.max) / 2;
+                sendCameraCommand('tilt-set', centerTilt);
+            }
+        }
+
+        // Zoom controls
+        zoomInBtn.addEventListener('click', () => {
+            const newZoom = Math.min(zoomRange.max, lastZoomValue + zoomStep);
+            sendCameraCommand('zoom', newZoom);
+            zoomSlider.value = newZoom;
+        });
+
+        zoomOutBtn.addEventListener('click', () => {
+            const newZoom = Math.max(zoomRange.min, lastZoomValue - zoomStep);
+            sendCameraCommand('zoom', newZoom);
+            zoomSlider.value = newZoom;
+        });
+
+        zoomSlider.addEventListener('input', () => {
+            const value = parseInt(zoomSlider.value);
+            sendCameraCommand('zoom', value);
+        });
+
+        // Initialize joystick
+        initJoystick();
+    </script>
+</body>
+</html>

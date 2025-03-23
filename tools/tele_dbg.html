@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insta360 Browser Control via PeerJS</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        video { max-width: 100%; border: 1px solid #ccc; background-color: #000; }
+        .control-panel { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
+        .control-group { margin-bottom: 15px; }
+        button { margin: 5px; padding: 8px 15px; cursor: pointer; }
+        .slider { width: 200px; }
+        .connection-info { margin-top: 20px; padding: 10px; background-color: #e9f7ef; border-radius: 5px; }
+        .hidden { display: none; }
+        .shareable-link { word-break: break-all; background-color: #f0f0f0; padding: 10px; border-radius: 4px; margin-top: 10px; }
+        .copy-btn { background-color: #4CAF50; color: white; border: none; border-radius: 4px; padding: 5px 10px; margin-left: 10px; cursor: pointer; }
+        #capabilities-log { font-family: monospace; font-size: 12px; background: #f5f5f5; padding: 10px; max-height: 150px; overflow: auto; margin-top: 10px; display: none; }
+        .btn-primary { background-color: #2196F3; color: white; border: none; }
+        .log-area { font-family: monospace; font-size: 12px; background: #f5f5f5; padding: 10px; max-height: 150px; overflow: auto; margin-top: 10px; }
+        /* Explicit video display styles */
+        #videoContainer { margin-top: 20px; }
+        #video { min-height: 240px; display: block; width: 100%; max-height: 70vh; background-color: #000; }
+        .video-status { text-align: center; padding: 10px; background-color: #f0f0f0; margin-bottom: 10px; }
+        .debug-area { border: 1px solid #ffcc00; padding: 10px; margin-top: 10px; background-color: #fffbea; }
+    </style>
+</head>
+<body>
+    <h1>Insta360 P2P Camera Control</h1>
+
+    <div id="setup-panel">
+        <div class="control-group">
+            <label for="mode">Select Mode:</label>
+            <select id="mode">
+                <option value="host">Host (Camera Side)</option>
+                <option value="remote">Remote (Control Side)</option>
+            </select>
+        </div>
+
+        <div id="host-setup" class="control-group">
+            <h3>Host Setup</h3>
+            <div class="control-group">
+                <label for="camera-select">Select Camera:</label>
+                <select id="camera-select">
+                    <option value="">Loading cameras...</option>
+                </select>
+                <button id="refresh-cameras">Refresh Camera List</button>
+                <button id="show-capabilities">Show Camera Capabilities</button>
+                <div id="capabilities-log"></div>
+            </div>
+
+            <!-- Local testing section -->
+            <div class="control-group">
+                <h4>Local Testing</h4>
+                <button id="start-local-test" class="btn-primary">Start Local Camera Test</button>
+                <p><small>Test your camera's PTZ controls locally before sharing</small></p>
+            </div>
+
+            <!-- Remote sharing section -->
+            <div class="control-group">
+                <h4>Remote Sharing</h4>
+                <button id="generate-id">Generate Host ID</button>
+                <div id="host-id-display" class="connection-info hidden">
+                    <p>Your Host ID: <span id="host-id"></span></p>
+                    <p>Shareable Link:</p>
+                    <div class="shareable-link">
+                        <span id="shareable-link-text"></span>
+                        <button id="copy-link" class="copy-btn">Copy</button>
+                    </div>
+                    <p><small>Share this link with anyone who needs to control your camera</small></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="remote-setup" class="control-group hidden">
+            <h3>Remote Setup</h3>
+            <label for="host-id-input">Enter Host ID:</label>
+            <input type="text" id="host-id-input">
+            <button id="connect-to-host">Connect</button>
+        </div>
+    </div>
+
+    <div id="videoContainer" class="hidden">
+        <div id="video-status" class="video-status">Waiting for video stream...</div>
+        <video id="video" autoplay playsinline></video>
+        <button id="force-play" class="btn-primary hidden">Force Play Video</button>
+        <div id="debug-video" class="debug-area hidden">
+            <strong>Video Debug Info:</strong>
+            <pre id="video-debug-info"></pre>
+            <button id="refresh-video" class="btn-primary">Refresh Video Feed</button>
+        </div>
+    </div>
+
+    <div id="controls" class="control-panel hidden">
+        <h3>Camera Controls</h3>
+        <div id="ptz-support-message" class="hidden">
+            <p>PTZ controls are supported for this camera!</p>
+        </div>
+        <div id="ptz-unsupported-message" class="hidden">
+            <p>PTZ controls are not available for this camera or are not supported by your browser.</p>
+        </div>
+
+        <div class="control-group">
+            <h4>Pan Control</h4>
+            <button id="pan-left">← Pan Left</button>
+            <button id="pan-right">Pan Right →</button>
+            <div>
+                <label for="pan-slider">Pan Position:</label>
+                <input type="range" id="pan-slider" class="slider" min="-1" max="1" step="0.1" value="0">
+                <span id="pan-value">0</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h4>Tilt Control</h4>
+            <button id="tilt-up">↑ Tilt Up</button>
+            <button id="tilt-down">Tilt Down ↓</button>
+            <div>
+                <label for="tilt-slider">Tilt Position:</label>
+                <input type="range" id="tilt-slider" class="slider" min="-1" max="1" step="0.1" value="0">
+                <span id="tilt-value">0</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h4>Zoom Control</h4>
+            <button id="zoom-in">Zoom In (+)</button>
+            <button id="zoom-out">Zoom Out (-)</button>
+            <div>
+                <label for="zoom-slider">Zoom Level:</label>
+                <input type="range" id="zoom-slider" class="slider" min="100" max="500" step="10" value="100">
+                <span id="zoom-value">100</span>
+            </div>
+        </div>
+
+        <div class="log-area" id="command-log">
+            PTZ command log will appear here...
+        </div>
+    </div>
+
+    <div id="connection-status" class="connection-info hidden">
+        Status: <span id="status">Not Connected</span>
+    </div>
+
+    <script>
+        // Global variables
+        let peer;
+        let connection;
+        let localStream;
+        let call;
+        let isHost = true;
+        let hostId;
+        let remotePeerId;
+        let videoTrack;
+        let cameraCapabilities = {};
+        let isLocalTesting = false;
+        let lastPanValue = 0;
+        let lastTiltValue = 0;
+        let lastZoomValue = 100;
+
+        // DOM elements
+        const modeSelect = document.getElementById('mode');
+        const hostSetup = document.getElementById('host-setup');
+        const remoteSetup = document.getElementById('remote-setup');
+        const cameraSelect = document.getElementById('camera-select');
+        const refreshCamerasBtn = document.getElementById('refresh-cameras');
+        const showCapabilitiesBtn = document.getElementById('show-capabilities');
+        const capabilitiesLog = document.getElementById('capabilities-log');
+        const generateIdBtn = document.getElementById('generate-id');
+        const startLocalTestBtn = document.getElementById('start-local-test');
+        const hostIdDisplay = document.getElementById('host-id-display');
+        const hostIdSpan = document.getElementById('host-id');
+        const hostIdInput = document.getElementById('host-id-input');
+        const connectBtn = document.getElementById('connect-to-host');
+        const videoContainer = document.getElementById('videoContainer');
+        const videoStatus = document.getElementById('video-status');
+        const video = document.getElementById('video');
+        const forcePlayBtn = document.getElementById('force-play');
+        const debugVideo = document.getElementById('debug-video');
+        const videoDebugInfo = document.getElementById('video-debug-info');
+        const refreshVideoBtn = document.getElementById('refresh-video');
+        const controls = document.getElementById('controls');
+        const connectionStatus = document.getElementById('connection-status');
+        const statusSpan = document.getElementById('status');
+        const ptzSupportMessage = document.getElementById('ptz-support-message');
+        const ptzUnsupportedMessage = document.getElementById('ptz-unsupported-message');
+        const shareableLinkText = document.getElementById('shareable-link-text');
+        const copyLinkBtn = document.getElementById('copy-link');
+        const commandLog = document.getElementById('command-log');
+
+        // Camera control elements
+        const panLeftBtn = document.getElementById('pan-left');
+        const panRightBtn = document.getElementById('pan-right');
+        const tiltUpBtn = document.getElementById('tilt-up');
+        const tiltDownBtn = document.getElementById('tilt-down');
+        const zoomInBtn = document.getElementById('zoom-in');
+        const zoomOutBtn = document.getElementById('zoom-out');
+        const panSlider = document.getElementById('pan-slider');
+        const tiltSlider = document.getElementById('tilt-slider');
+        const zoomSlider = document.getElementById('zoom-slider');
+        const panValue = document.getElementById('pan-value');
+        const tiltValue = document.getElementById('tilt-value');
+        const zoomValue = document.getElementById('zoom-value');
+
+        // Check for host ID in URL fragment on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.location.hash) {
+                const hashId = window.location.hash.substring(1);
+                if (hashId) {
+                    modeSelect.value = 'remote';
+                    isHost = false;
+                    hostSetup.classList.add('hidden');
+                    remoteSetup.classList.remove('hidden');
+                    hostIdInput.value = hashId;
+                }
+            }
+        });
+
+        // Force play button
+        forcePlayBtn.addEventListener('click', () => {
+            video.play().then(() => {
+                forcePlayBtn.classList.add('hidden');
+                logCommand('Video playback started manually');
+            }).catch(e => {
+                logCommand('Failed to force play: ' + e.message);
+            });
+        });
+
+        // Refresh video button
+        refreshVideoBtn.addEventListener('click', () => {
+            if (video.srcObject) {
+                logCommand('Attempting to refresh video feed');
+
+                // Try to restart the video element
+                const currentStream = video.srcObject;
+                video.srcObject = null;
+                setTimeout(() => {
+                    video.srcObject = currentStream;
+                    video.load();
+                    video.play().catch(e => {
+                        logCommand('Error playing refreshed video: ' + e.message);
+                        forcePlayBtn.classList.remove('hidden');
+                    });
+                }, 500);
+            }
+        });
+
+        // Helper function to update debug info
+        function updateVideoDebugInfo() {
+            if (!video.srcObject) {
+                videoDebugInfo.textContent = 'No video stream assigned';
+                return;
+            }
+
+            const stream = video.srcObject;
+            const info = {
+                readyState: video.readyState,
+                networkState: video.networkState,
+                paused: video.paused,
+                ended: video.ended,
+                currentTime: video.currentTime,
+                videoWidth: video.videoWidth,
+                videoHeight: video.videoHeight,
+                tracks: []
+            };
+
+            stream.getTracks().forEach(track => {
+                info.tracks.push({
+                    kind: track.kind,
+                    id: track.id,
+                    enabled: track.enabled,
+                    readyState: track.readyState,
+                    muted: track.muted
+                });
+            });
+
+            videoDebugInfo.textContent = JSON.stringify(info, null, 2);
+        }
+
+        // Monitor video state
+        setInterval(updateVideoDebugInfo, 2000);
+
+        // Helper function to log commands
+        function logCommand(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            commandLog.innerHTML = `[${timestamp}] ${message}<br>` + commandLog.innerHTML;
+
+            // Keep log at reasonable size
+            if (commandLog.innerHTML.length > 5000) {
+                commandLog.innerHTML = commandLog.innerHTML.substring(0, 4000);
+            }
+        }
+
+        // Check if object is empty
+        function isObjectEmpty(obj) {
+            return Object.keys(obj).length === 0;
+        }
+
+        // Load available cameras
+        function loadCameras() {
+            cameraSelect.innerHTML = '<option value="">Loading cameras...</option>';
+
+            // Request PTZ permissions from the start
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    pan: true,
+                    tilt: true,
+                    zoom: true
+                }
+            })
+            .then(stream => {
+                // Stop the stream immediately, we just needed permission
+                stream.getTracks().forEach(track => track.stop());
+
+                return navigator.mediaDevices.enumerateDevices();
+            })
+            .then(devices => {
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                cameraSelect.innerHTML = '';
+
+                if (videoDevices.length === 0) {
+                    cameraSelect.innerHTML = '<option value="">No cameras found</option>';
+                } else {
+                    videoDevices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+                        cameraSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(err => {
+                console.error('Error enumerating devices:', err);
+                cameraSelect.innerHTML = '<option value="">Error loading cameras</option>';
+
+                // Try again without PTZ requirements if there was an error
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        stream.getTracks().forEach(track => track.stop());
+                        return navigator.mediaDevices.enumerateDevices();
+                    })
+                    .then(devices => {
+                        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                        cameraSelect.innerHTML = '';
+
+                        if (videoDevices.length === 0) {
+                            cameraSelect.innerHTML = '<option value="">No cameras found</option>';
+                        } else {
+                            videoDevices.forEach(device => {
+                                const option = document.createElement('option');
+                                option.value = device.deviceId;
+                                option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+                                cameraSelect.appendChild(option);
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Fallback camera enumeration failed:', err);
+                    });
+            });
+        }
+
+        // Initial camera loading
+        loadCameras();
+
+        // Refresh cameras button
+        refreshCamerasBtn.addEventListener('click', loadCameras);
+
+        // Start local camera test
+        startLocalTestBtn.addEventListener('click', () => {
+            isLocalTesting = true;
+            startCamera();
+        });
+
+        // Show camera capabilities
+        showCapabilitiesBtn.addEventListener('click', () => {
+            const selectedDeviceId = cameraSelect.value;
+            if (!selectedDeviceId) {
+                capabilitiesLog.textContent = 'Please select a camera first';
+                capabilitiesLog.style.display = 'block';
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    deviceId: { exact: selectedDeviceId },
+                    pan: true,
+                    tilt: true,
+                    zoom: true
+                }
+            }).then(stream => {
+                const videoTrack = stream.getVideoTracks()[0];
+
+                capabilitiesLog.style.display = 'block';
+
+                if (typeof videoTrack.getCapabilities === 'function') {
+                    const capabilities = videoTrack.getCapabilities();
+                    cameraCapabilities = capabilities;
+
+                    // Format and display capabilities
+                    capabilitiesLog.innerHTML = '<strong>Camera Capabilities:</strong><br>';
+                    capabilitiesLog.innerHTML += JSON.stringify(capabilities, null, 2)
+                        .replace(/\n/g, '<br>')
+                        .replace(/ /g, '&nbsp;');
+
+                    // Check if PTZ is supported
+                    const hasPTZ = capabilities.pan || capabilities.tilt || capabilities.zoom;
+                    capabilitiesLog.innerHTML += '<br><br><strong>PTZ Support: ' + (hasPTZ ? 'YES' : 'NO') + '</strong>';
+
+                    if (hasPTZ) {
+                        capabilitiesLog.innerHTML += '<br>Supported controls: ';
+                        if (capabilities.pan) capabilitiesLog.innerHTML += 'Pan ';
+                        if (capabilities.tilt) capabilitiesLog.innerHTML += 'Tilt ';
+                        if (capabilities.zoom) capabilitiesLog.innerHTML += 'Zoom ';
+                    }
+
+                    // Adjust sliders based on camera capabilities
+                    adjustControlsBasedOnCapabilities(capabilities);
+                } else {
+                    capabilitiesLog.textContent = 'This browser does not support getCapabilities()';
+                }
+
+                // Stop the stream
+                stream.getTracks().forEach(track => track.stop());
+            }).catch(err => {
+                capabilitiesLog.textContent = 'Error accessing camera: ' + err.message;
+                capabilitiesLog.style.display = 'block';
+            });
+        });
+
+        // Adjust controls based on camera capabilities
+        function adjustControlsBasedOnCapabilities(capabilities) {
+            if (capabilities.pan) {
+                panSlider.min = capabilities.pan.min;
+                panSlider.max = capabilities.pan.max;
+                panSlider.step = capabilities.pan.step || 1;
+                panSlider.value = lastPanValue = (capabilities.pan.min + capabilities.pan.max) / 2;
+                panValue.textContent = panSlider.value;
+            }
+
+            if (capabilities.tilt) {
+                tiltSlider.min = capabilities.tilt.min;
+                tiltSlider.max = capabilities.tilt.max;
+                tiltSlider.step = capabilities.tilt.step || 1;
+                tiltSlider.value = lastTiltValue = (capabilities.tilt.min + capabilities.tilt.max) / 2;
+                tiltValue.textContent = tiltSlider.value;
+            }
+
+            if (capabilities.zoom) {
+                zoomSlider.min = capabilities.zoom.min;
+                zoomSlider.max = capabilities.zoom.max;
+                zoomSlider.step = capabilities.zoom.step || 10;
+                zoomSlider.value = lastZoomValue = capabilities.zoom.min;
+                zoomValue.textContent = zoomSlider.value;
+            }
+        }
+
+        // Mode selection
+        modeSelect.addEventListener('change', () => {
+            isHost = modeSelect.value === 'host';
+            hostSetup.classList.toggle('hidden', !isHost);
+            remoteSetup.classList.toggle('hidden', isHost);
+        });
+
+        // Generate host ID
+        generateIdBtn.addEventListener('click', () => {
+            // If we're already testing locally, use the existing stream
+            if (isLocalTesting && localStream) {
+                setupPeerConnection();
+            } else {
+                // Otherwise start the camera first, then create peer connection
+                startCamera(true);
+            }
+        });
+
+        // Set up peer connection after camera is started
+        function setupPeerConnection() {
+            peer = new Peer();
+
+            peer.on('open', (id) => {
+                hostId = id;
+                hostIdSpan.textContent = id;
+
+                // Create shareable link with the host ID in the fragment
+                const currentUrl = window.location.href.split('#')[0];
+                const shareableLink = `${currentUrl}#${id}`;
+                shareableLinkText.textContent = shareableLink;
+
+                hostIdDisplay.classList.remove('hidden');
+                updateStatus('PeerJS ID generated, waiting for connection...');
+            });
+
+            peer.on('connection', (conn) => {
+                connection = conn;
+                remotePeerId = conn.peer;
+                logCommand('Received data connection from peer: ' + remotePeerId);
+                setupDataConnection();
+            });
+
+            peer.on('error', (err) => {
+                console.error('PeerJS error:', err);
+                updateStatus('Error: ' + err.type);
+            });
+        }
+
+        // Copy link to clipboard
+        copyLinkBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(shareableLinkText.textContent)
+                .then(() => {
+                    const originalText = copyLinkBtn.textContent;
+                    copyLinkBtn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyLinkBtn.textContent = originalText;
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    alert('Failed to copy link to clipboard');
+                });
+        });
+
+        // Connect to host
+        connectBtn.addEventListener('click', () => {
+            const peerId = hostIdInput.value.trim();
+            if (!peerId) {
+                alert('Please enter a valid host ID');
+                return;
+            }
+
+            // Show video container immediately with status message
+            videoContainer.classList.remove('hidden');
+            videoStatus.textContent = 'Connecting to host...';
+            debugVideo.classList.remove('hidden');
+
+            peer = new Peer();
+
+            peer.on('open', (id) => {
+                remotePeerId = id;
+                updateStatus('Connecting to host...');
+
+                // Create data connection to host
+                connection = peer.connect(peerId);
+                setupDataConnection();
+
+                // Wait for incoming call from host
+                peer.on('call', (incomingCall) => {
+                    call = incomingCall;
+                    videoStatus.textContent = 'Receiving call from host...';
+                    logCommand('Received video call from host');
+
+                    // Answer the call without sending any stream
+                    call.answer();
+
+                    call.on('stream', (remoteStream) => {
+                        logCommand(`Received remote stream with ${remoteStream.getTracks().length} tracks`);
+
+                        // Log detailed track info
+                        remoteStream.getTracks().forEach(track => {
+                            logCommand(`Track: ${track.kind}, enabled: ${track.enabled}, readyState: ${track.readyState}`);
+                        });
+
+                        videoStatus.textContent = 'Stream received, setting up video...';
+
+                        // Check if the stream actually has video tracks
+                        if (remoteStream.getVideoTracks().length === 0) {
+                            logCommand('WARNING: Stream received but contains no video tracks!');
+                            videoStatus.textContent = 'Stream received but has no video tracks';
+                        }
+
+                        // Set the stream to video element
+                        video.srcObject = remoteStream;
+
+                        // Explicitly set video attributes for better compatibility
+                        video.setAttribute('playsinline', 'playsinline');
+                        video.setAttribute('autoplay', 'autoplay');
+                        video.style.display = 'block';
+
+                        updateVideoDebugInfo();
+
+                        video.onloadedmetadata = () => {
+                            logCommand(`Video metadata loaded: ${video.videoWidth}x${video.videoHeight}`);
+                            videoStatus.textContent = 'Video loaded, starting playback...';
+
+                            // Force show controls
+                            controls.classList.remove('hidden');
+
+                            // Try to play the video
+                            let playPromise = video.play();
+
+                            if (playPromise !== undefined) {
+                                playPromise.then(() => {
+                                    logCommand('Video playback started automatically');
+                                    videoStatus.textContent = '';
+                                    updateStatus('Video stream connected and playing');
+                                }).catch(e => {
+                                    // Auto-play was prevented
+                                    logCommand('Auto-play was prevented: ' + e.message);
+                                    videoStatus.textContent = 'Click play button to start video';
+                                    forcePlayBtn.classList.remove('hidden');
+                                });
+                            } else {
+                                // Older browsers might not return a promise
+                                logCommand('No play promise returned - assuming video is playing');
+                                videoStatus.textContent = '';
+                            }
+                        };
+
+                        // Handle video errors
+                        video.onerror = (e) => {
+                            logCommand('Video error: ' + (video.error ? video.error.message : e));
+                            videoStatus.textContent = 'Video error occurred';
+                        };
+                    });
+
+                    call.on('error', (err) => {
+                        console.error('Call error:', err);
+                        videoStatus.textContent = 'Video call error: ' + err;
+                        logCommand('Call error: ' + err);
+                    });
+
+                    call.on('close', () => {
+                        logCommand('Video call closed');
+                        videoStatus.textContent = 'Video call ended';
+                        updateStatus('Video call ended');
+                    });
+                });
+            });
+
+            peer.on('error', (err) => {
+                console.error('PeerJS error:', err);
+                updateStatus('Error: ' + err.type);
+                videoStatus.textContent = 'Connection error: ' + err.type;
+            });
+        });
+
+        // Start camera function (used for both local testing and P2P)
+        function startCamera(forPeerConnection = false) {
+            const selectedDeviceId = cameraSelect.value;
+            if (!selectedDeviceId) {
+                alert('Please select a camera first');
+                return;
+            }
+
+            const constraints = {
+                video: {
+                    deviceId: { exact: selectedDeviceId },
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    frameRate: { ideal: 30 },
+                    // Explicitly request PTZ controls
+                    pan: true,
+                    tilt: true,
+                    zoom: true
+                },
+                audio: false
+            };
+
+            // Show video container with loading message
+            videoContainer.classList.remove('hidden');
+            videoStatus.textContent = 'Starting camera...';
+
+            navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => {
+                localStream = stream;
+                videoTrack = stream.getVideoTracks()[0];
+                logCommand(`Camera started: ${videoTrack.label} with ${stream.getTracks().length} tracks`);
+
+                video.srcObject = stream;
+                video.style.width = '100%';
+                video.style.maxHeight = '70vh';
+                video.style.display = 'block';
+                videoStatus.textContent = '';
+                connectionStatus.classList.remove('hidden');
+                controls.classList.remove('hidden');
+
+                if (isLocalTesting) {
+                    updateStatus('Local testing mode active - Try the PTZ controls');
+                    debugVideo.classList.remove('hidden');
+                }
+
+                // Check camera capabilities after getting stream
+                if (typeof videoTrack.getCapabilities === 'function') {
+                    const capabilities = videoTrack.getCapabilities();
+                    cameraCapabilities = capabilities;
+
+                    logCommand('Camera capabilities: ' + JSON.stringify(capabilities));
+
+                    // Check if PTZ is supported
+                    const hasPTZ = capabilities.pan || capabilities.tilt || capabilities.zoom;
+
+                    if (hasPTZ) {
+                        ptzSupportMessage.classList.remove('hidden');
+                        ptzUnsupportedMessage.classList.add('hidden');
+                        logCommand('PTZ is supported by this camera');
+                    } else {
+                        ptzSupportMessage.classList.add('hidden');
+                        ptzUnsupportedMessage.classList.remove('hidden');
+                        logCommand('PTZ is NOT supported by this camera');
+                    }
+
+                    // Adjust sliders based on camera capabilities
+                    adjustControlsBasedOnCapabilities(capabilities);
+                }
+
+                // If this was started for peer connection, create the peer
+                if (forPeerConnection) {
+                    setupPeerConnection();
+                }
+            })
+            .catch(err => {
+                console.error('Failed to get camera stream:', err);
+                updateStatus('Error: Unable to access camera with PTZ. ' + err.message);
+                videoStatus.textContent = 'Camera error: ' + err.message;
+
+                // Try again without PTZ if it fails
+                if (err.name === 'OverconstrainedError' || err.name === 'NotFoundError') {
+                    const basicConstraints = {
+                        video: {
+                            deviceId: { exact: selectedDeviceId }
+                        },
+                        audio: false
+                    };
+
+                    updateStatus('Retrying without PTZ requirements...');
+                    videoStatus.textContent = 'Retrying without PTZ requirements...';
+
+                    navigator.mediaDevices.getUserMedia(basicConstraints)
+                    .then(stream => {
+                        localStream = stream;
+                        videoTrack = stream.getVideoTracks()[0];
+                        video.srcObject = stream;
+                        video.style.width = '100%';
+                        video.style.maxHeight = '70vh';
+                        video.style.display = 'block';
+                        videoStatus.textContent = '';
+                        connectionStatus.classList.remove('hidden');
+                        controls.classList.remove('hidden');
+
+                        ptzSupportMessage.classList.add('hidden');
+                        ptzUnsupportedMessage.classList.remove('hidden');
+                        logCommand('Camera accessed without PTZ support');
+
+                        if (forPeerConnection) {
+                            setupPeerConnection();
+                        }
+                    })
+                    .catch(fallbackErr => {
+                        console.error('Fallback camera access failed:', fallbackErr);
+                        updateStatus('Error: Unable to access camera. ' + fallbackErr.message);
+                        videoStatus.textContent = 'Camera access failed: ' + fallbackErr.message;
+                    });
+                }
+            });
+        }
+
+        // Setup data connection for camera control messages
+        function setupDataConnection() {
+            if (!connection) return;
+
+            connection.on('open', () => {
+                updateStatus('Data connection established');
+
+                if (!isHost) {
+                    controls.classList.remove('hidden');
+                    videoStatus.textContent = 'Data connection established, requesting video...';
+
+                    // Send a message to request video stream
+                    connection.send({
+                        type: 'request-video'
+                    });
+
+                    logCommand('Sent video request to host');
+                } else {
+                    // Host receives connection from remote
+                    logCommand('Remote connected, waiting for video request');
+                }
+
+                // Send camera capabilities to remote if we're the host
+                if (isHost && videoTrack) {
+                    // Ensure we have capabilities to send
+                    if (typeof videoTrack.getCapabilities === 'function') {
+                        const capabilities = videoTrack.getCapabilities();
+
+                        // Only send if PTZ capabilities exist
+                        if (!isObjectEmpty(capabilities) && 
+                            (capabilities.pan || capabilities.tilt || capabilities.zoom)) {
+
+                            connection.send({
+                                type: 'camera-capabilities',
+                                capabilities: {
+                                    pan: capabilities.pan,
+                                    tilt: capabilities.tilt,
+                                    zoom: capabilities.zoom
+                                }
+                            });
+                            logCommand('Sent camera capabilities to remote');
+                        }
+                    }
+                }
+            });
+
+            connection.on('data', (data) => {
+                if (data.type === 'camera-control') {
+                    handleReceivedCommand(data);
+                }
+                else if (data.type === 'camera-capabilities' && !isHost) {
+                    // Remote received capabilities from host
+                    logCommand('Received camera capabilities from host');
+
+                    // Update sliders based on received capabilities
+                    if (data.capabilities.pan) {
+                        panSlider.min = data.capabilities.pan.min;
+                        panSlider.max = data.capabilities.pan.max;
+                        panSlider.step = data.capabilities.pan.step || 0.1;
+                        panSlider.value = (data.capabilities.pan.min + data.capabilities.pan.max) / 2;
+                        panValue.textContent = panSlider.value;
+                        logCommand(`Updated pan range: ${panSlider.min} to ${panSlider.max}`);
+                    }
+
+                    if (data.capabilities.tilt) {
+                        tiltSlider.min = data.capabilities.tilt.min;
+                        tiltSlider.max = data.capabilities.tilt.max;
+                        tiltSlider.step = data.capabilities.tilt.step || 0.1;
+                        tiltSlider.value = (data.capabilities.tilt.min + data.capabilities.tilt.max) / 2;
+                        tiltValue.textContent = tiltSlider.value;
+                        logCommand(`Updated tilt range: ${tiltSlider.min} to ${tiltSlider.max}`);
+                    }
+
+                    if (data.capabilities.zoom) {
+                        zoomSlider.min = data.capabilities.zoom.min;
+                        zoomSlider.max = data.capabilities.zoom.max;
+                        zoomSlider.step = data.capabilities.zoom.step || 1;
+                        zoomSlider.value = data.capabilities.zoom.min;
+                        zoomValue.textContent = zoomSlider.value;
+                        logCommand(`Updated zoom range: ${zoomSlider.min} to ${zoomSlider.max}`);
+                    }
+                }
+                else if (data.type === 'request-video' && isHost) {
+                    // Host received video request from remote
+                    logCommand('Received video request from remote, initiating call');
+
+                    if (localStream) {
+                        // Initiate call to remote with our camera stream
+                        call = peer.call(remotePeerId, localStream);
+
+                        call.on('stream', (remoteStream) => {
+                            logCommand('Call connected (stream event on host side)');
+                        });
+
+                        call.on('error', (err) => {
+                            console.error('Call error on host side:', err);
+                            logCommand('Call error on host side: ' + err);
+                        });
+
+                        call.on('close', () => {
+                            logCommand('Call closed on host side');
+                        });
+
+                        updateStatus('Video call initiated to remote');
+                    } else {
+                        logCommand('ERROR: Cannot initiate call - no local stream available');
+                        connection.send({
+                            type: 'error',
+                            message: 'Host camera not available'
+                        });
+                    }
+                }
+            });
+
+            connection.on('close', () => {
+                updateStatus('Connection closed');
+            });
+
+            connection.on('error', (err) => {
+                console.error('Connection error:', err);
+                updateStatus('Connection error');
+            });
+        }
+
+        // Local camera control function with pan/tilt synchronization fix
+        function applyLocalCameraControl(command, value) {
+            if (!videoTrack) {
+                console.error('No video track available');
+                return;
+            }
+
+            try {
+                logCommand(`Applying ${command} with value ${value}`);
+
+                // Update cached values based on the command
+                if (command === 'pan-set') {
+                    lastPanValue = value;
+                } else if (command === 'tilt-set') {
+                    lastTiltValue = value;
+                } else if (command === 'zoom') {
+                    lastZoomValue = value;
+                }
+
+                // KEY FIX: When applying pan/tilt, we need to apply both together
+                switch (command) {
+                    case 'pan-set':
+                    case 'tilt-set':
+                        // Apply both pan and tilt together
+                        logCommand(`Applying combined pan=${lastPanValue}, tilt=${lastTiltValue}`);
+                        videoTrack.applyConstraints({
+                            advanced: [{ 
+                                pan: lastPanValue,
+                                tilt: lastTiltValue 
+                            }]
+                        }).catch(e => {
+                            console.error('Pan/tilt constraint error:', e);
+                            logCommand('Error: ' + e.message);
+                        });
+                        break;
+
+                    case 'zoom':
+                        videoTrack.applyConstraints({
+                            advanced: [{ zoom: value }]
+                        }).catch(e => {
+                            console.error('Zoom constraint error:', e);
+                            logCommand('Error: ' + e.message);
+                        });
+                        break;
+                }
+            } catch (err) {
+                console.error('Error applying constraint:', err);
+                logCommand('Error: ' + err.message);
+            }
+        }
+
+        // Camera control functions - send command if in P2P mode, apply locally if in testing mode
+        function sendCameraCommand(command, value = null) {
+            if (isLocalTesting || isHost) {
+                // Apply locally if we're testing or we're the host
+                applyLocalCameraControl(command, value);
+            }
+
+            // Only send over P2P if we're not in local testing mode and have a connection
+            if (!isLocalTesting && connection && connection.open) {
+                const message = {
+                    type: 'camera-control',
+                    command: command,
+                    value: value
+                };
+
+                connection.send(message);
+                logCommand(`Sent command: ${command} = ${value}`);
+            } else if (!isLocalTesting && (!connection || !connection.open)) {
+                logCommand('Cannot send command: No active connection');
+            }
+        }
+
+        // Handle received camera control commands (host side)
+        function handleReceivedCommand(data) {
+            if (!isHost || !data || data.type !== 'camera-control') return;
+
+            logCommand(`Received command: ${data.command} = ${data.value}`);
+            applyLocalCameraControl(data.command, data.value);
+        }
+
+        // Update connection status display
+        function updateStatus(message) {
+            statusSpan.textContent = message;
+            connectionStatus.classList.remove('hidden');
+            logCommand(`Status: ${message}`);
+        }
+
+        // Add event listeners for camera controls
+        panLeftBtn.addEventListener('click', () => {
+            const newPan = Math.max(parseFloat(panSlider.min), parseFloat(panSlider.value) - parseFloat(panSlider.step));
+            panSlider.value = newPan;
+            panValue.textContent = newPan;
+            sendCameraCommand('pan-set', newPan);
+        });
+
+        panRightBtn.addEventListener('click', () => {
+            const newPan = Math.min(parseFloat(panSlider.max), parseFloat(panSlider.value) + parseFloat(panSlider.step));
+            panSlider.value = newPan;
+            panValue.textContent = newPan;
+            sendCameraCommand('pan-set', newPan);
+        });
+
+        tiltUpBtn.addEventListener('click', () => {
+            const newTilt = Math.min(parseFloat(tiltSlider.max), parseFloat(tiltSlider.value) + parseFloat(tiltSlider.step));
+            tiltSlider.value = newTilt;
+            tiltValue.textContent = newTilt;
+            sendCameraCommand('tilt-set', newTilt);
+        });
+
+        tiltDownBtn.addEventListener('click', () => {
+            const newTilt = Math.max(parseFloat(tiltSlider.min), parseFloat(tiltSlider.value) - parseFloat(tiltSlider.step));
+            tiltSlider.value = newTilt;
+            tiltValue.textContent = newTilt;
+            sendCameraCommand('tilt-set', newTilt);
+        });
+
+        zoomInBtn.addEventListener('click', () => {
+            const newZoom = Math.min(parseFloat(zoomSlider.max), parseFloat(zoomSlider.value) + parseFloat(zoomSlider.step));
+            zoomSlider.value = newZoom;
+            zoomValue.textContent = newZoom;
+            sendCameraCommand('zoom', newZoom);
+        });
+
+        zoomOutBtn.addEventListener('click', () => {
+            const newZoom = Math.max(parseFloat(zoomSlider.min), parseFloat(zoomSlider.value) - parseFloat(zoomSlider.step));
+            zoomSlider.value = newZoom;
+            zoomValue.textContent = newZoom;
+            sendCameraCommand('zoom', newZoom);
+        });
+
+        panSlider.addEventListener('input', () => {
+            panValue.textContent = panSlider.value;
+            sendCameraCommand('pan-set', parseFloat(panSlider.value));
+        });
+
+        tiltSlider.addEventListener('input', () => {
+            tiltValue.textContent = tiltSlider.value;
+            sendCameraCommand('tilt-set', parseFloat(tiltSlider.value));
+        });
+
+        zoomSlider.addEventListener('input', () => {
+            zoomValue.textContent = zoomSlider.value;
+            sendCameraCommand('zoom', parseFloat(zoomSlider.value));
+        });
+    </script>
+</body>
+</html>
