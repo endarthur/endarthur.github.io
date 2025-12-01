@@ -307,6 +307,194 @@ The custom element imports only what it needs from `bearing/core`, keeping the b
 
 ---
 
+## 3b. Other Extractable Libraries
+
+Beyond `<stereo-net>`, here are other tools in your codebase that could become standalone libraries:
+
+### 1. `<data-table>` — Importabular as Custom Element
+
+You already have **importabular.js** — a full-featured spreadsheet component (~800 lines). It's remarkably complete:
+- Iframe-based style isolation
+- Excel-compatible copy/paste
+- Keyboard navigation (arrows, tab, enter, F2 to edit)
+- Multi-cell selection with shift
+- Touch support
+- Extensible via subclassing (like `DHEditor` in desurvey.html)
+
+**Extraction idea**: Wrap it as a custom element:
+
+```html
+<data-table>
+  name, age, city
+  Alice, 30, London
+  Bob, 25, Paris
+</data-table>
+```
+
+Or programmatic:
+
+```html
+<data-table
+  id="survey"
+  min-cols="4"
+  max-rows="100">
+</data-table>
+
+<script>
+  document.getElementById('survey').setData([
+    ['bhid', 'at', 'bearing', 'dip'],
+    ['DH01', '0', '120', '60'],
+  ]);
+</script>
+```
+
+**Bundle size**: ~8KB minified (already lean)
+
+---
+
+### 2. `touch-gestures` — Framework-Agnostic Gesture Detection
+
+Your **gestures.js** has A-Frame components, but the core logic is framework-agnostic. Extract as:
+
+```javascript
+import { GestureDetector } from 'touch-gestures';
+
+const gestures = new GestureDetector(element);
+
+gestures.on('onefingermove', ({ positionChange }) => {
+  model.rotation.y += positionChange.x * 5;
+});
+
+gestures.on('twofingermove', ({ spreadChange, startSpread }) => {
+  model.scale.multiplyScalar(1 + spreadChange / startSpread);
+});
+```
+
+**Use cases**: Any touch-based 3D viewer, image pan/zoom, AR without A-Frame
+
+**Bundle size**: ~2KB
+
+---
+
+### 3. `drillhole` — Curve Geometry (Three.js Optional)
+
+Your **desurvey.js** extends `THREE.Curve`, but the math is independent. Extract as:
+
+```javascript
+import { Drillhole } from 'drillhole';
+
+const hole = new Drillhole([
+  [0, 120, 60],    // [depth, azimuth, dip]
+  [50, 130, 55],
+  [100, 140, 45],
+], { collar: [0, 0, 0], length: 150 });
+
+hole.getPoint(75);      // [x, y, z] at depth 75m
+hole.getTangent(75);    // tangent vector
+hole.getSegment(30, 80).getPoints(10); // 10 points along interval
+```
+
+**Optional Three.js adapter**:
+
+```javascript
+import { asCurve } from 'drillhole/three';
+const curve = asCurve(hole);
+new THREE.TubeGeometry(curve, 64, 1, 8);
+```
+
+**Bundle size**: ~3KB core + ~1KB Three.js adapter
+
+---
+
+### 4. `device-attitude` — Phone → Geological Measurement
+
+Your compass converts device orientation to geological attitudes. Extract:
+
+```javascript
+import { DeviceAttitude } from 'device-attitude';
+
+const sensor = new DeviceAttitude();
+
+sensor.on('change', ({ plane, line }) => {
+  console.log(`${plane.dipDirection}/${plane.dip}`);
+});
+
+sensor.start();
+const reading = sensor.lock();
+reading.toCSV();  // "120,45,plane"
+```
+
+**Features**: GyroNorm fallback, magnetic declination, calibration indicator
+
+**Bundle size**: ~4KB
+
+---
+
+### 5. `peer-share` — Simplified P2P Data Sharing
+
+Your location.html pattern extracted:
+
+```javascript
+import { PeerShare } from 'peer-share';
+
+// Sender
+const share = new PeerShare();
+const link = await share.createLink();
+share.send({ lat: -22.9, lon: -43.2 });
+
+// Receiver
+const recv = new PeerShare(linkId);
+recv.on('data', console.log);
+```
+
+**Bundle size**: ~3KB (plus PeerJS)
+
+---
+
+### 6. `geo-model` — ECMAltine's Modeling DSL
+
+The `Plane()`, `Fault()`, `Fold()`, `Lith()`, `Model()` pattern:
+
+```javascript
+import { Model, Plane, Fault, Fold, Lith } from 'geo-model';
+
+const model = Model([
+  Lith(Plane(90, 10), 'sandstone'),
+  Fault(Plane(45, 60), { displacement: [0, 0, 50] }),
+  Fold({ type: 'sinusoidal', axis: [0, 1, 0], wavelength: 100 }),
+]);
+
+model.at(100, 50, -30); // 'sandstone'
+model.toVoxelGrid({ bounds: [...], resolution: 1 });
+```
+
+**Bundle size**: ~5KB
+
+---
+
+### The Full Bearing Ecosystem
+
+```
+bearing/
+├── core/              # Orientation math, projections, tensors
+├── stereo-net/        # <stereo-net> custom element
+├── data-table/        # <data-table> from importabular
+├── touch-gestures/    # Framework-agnostic gestures
+├── drillhole/         # Drillhole curves
+├── device-attitude/   # Phone → geological measurement
+├── peer-share/        # P2P data sharing
+├── geo-model/         # Declarative geological modeling
+└── adapters/
+    ├── three/         # Three.js integrations
+    └── aframe/        # A-Frame components
+```
+
+Each package: independently installable, ~2-8KB, minimal dependencies, MIT licensed.
+
+This positions **bearing** as the comprehensive toolkit for geoscience web development.
+
+---
+
 ## 4. Offline-First PWA Bundle
 
 Your philosophy aligns perfectly with Progressive Web Apps. A weekend project:
