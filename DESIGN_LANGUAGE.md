@@ -523,7 +523,7 @@ const urlsToCache = [
 ```
 
 #### 9. Add dark mode
-Given your Gwern influence, a dark mode toggle would fit:
+A dark mode toggle could be nice (note: Gwern's dark mode came after most of your site was written):
 ```css
 @media (prefers-color-scheme: dark) {
     body { background-color: #1a1a1a; }
