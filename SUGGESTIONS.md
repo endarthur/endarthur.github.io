@@ -185,12 +185,97 @@ Perfect for educational content:
 <p>The acute angle between sets suggests σ1 oriented roughly N-S.</p>
 ```
 
+#### Element IDs & CSS Classes (Extensibility)
+
+Keep the core simple, but give elements predictable IDs so users can add interactivity:
+
+```html
+<stereo-net id="faults">
+  045/60, plane, red, S1
+  315/55, plane, blue, S2
+  045/45, line, green, L1
+</stereo-net>
+```
+
+Generates:
+
+```html
+<svg id="faults" class="stereo-net" viewBox="-110 -110 220 220">
+  <g class="stereo-net__primitive"><!-- grid circles --></g>
+  <g class="stereo-net__data">
+    <g id="faults__S1" class="stereo-net__plane" data-dd="045" data-d="60">
+      <polyline class="stereo-net__gc" points="..."/>
+      <circle class="stereo-net__pole" cx="..." cy="..." r="3"/>
+      <text class="stereo-net__label">S1</text>
+    </g>
+    <g id="faults__S2" class="stereo-net__plane" data-dd="315" data-d="55">...</g>
+    <g id="faults__L1" class="stereo-net__line" data-dd="045" data-d="45">
+      <circle class="stereo-net__point" cx="..." cy="..." r="3"/>
+      <text class="stereo-net__label">L1</text>
+    </g>
+  </g>
+</svg>
+```
+
+Now users can do their own interactivity with plain CSS/JS:
+
+```css
+/* Hover effect - no JS needed */
+.stereo-net__plane:hover .stereo-net__gc { stroke-width: 3; }
+.stereo-net__plane:hover .stereo-net__pole { r: 5; }
+
+/* Highlight linked from text */
+#faults__S1.highlight .stereo-net__gc { stroke: yellow; stroke-width: 4; }
+```
+
+```html
+<!-- Link text to stereonet element -->
+<p>The main foliation
+  <span class="stereo-ref" data-target="faults__S1">(S1: 045/60)</span>
+  dips steeply to the NE.
+</p>
+
+<script>
+// Optional: wire up text↔stereonet highlighting
+document.querySelectorAll('.stereo-ref').forEach(el => {
+  const target = document.getElementById(el.dataset.target);
+  el.addEventListener('mouseenter', () => target.classList.add('highlight'));
+  el.addEventListener('mouseleave', () => target.classList.remove('highlight'));
+});
+</script>
+```
+
+This keeps the library small but lets power users build rich interactions.
+
+#### Advanced: Rotated Views
+
+For arbitrary stereonet orientation (e.g., looking down-plunge at a fold):
+
+```html
+<stereo-net view="120/45">
+  <!-- Data plotted relative to rotated view -->
+  <!-- view="dd/d" rotates the stereonet so that direction is at center -->
+</stereo-net>
+```
+
+Or for rotating the entire plot (like tilting a physical stereonet):
+
+```html
+<stereo-net rotate="30">
+  <!-- Rotates the whole plot 30° clockwise -->
+</stereo-net>
+```
+
+This is useful for structural analysis but could be a v2 feature.
+
 #### Bundle Size Target
 
 - Core (projection math): ~2KB minified
 - SVG rendering: ~2KB minified
 - Custom element wrapper: ~1KB minified
 - **Total: ~5KB** — smaller than most icons
+
+The interactivity examples above are *user code*, not library code. The library just provides good structure.
 
 #### Distribution
 
