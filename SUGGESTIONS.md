@@ -291,6 +291,20 @@ The interactivity examples above are *user code*, not library code. The library 
 
 This would be genuinely useful for geology blogs, course materials, and Stack Exchange answers. Nobody's done it yet.
 
+#### Relationship to Bearing
+
+This component would be part of the **auttitude → bearing** rebuild:
+
+```
+bearing/
+├── core/           # Math library (projection, orientation tensor, etc.)
+├── stereo-net/     # <stereo-net> custom element
+├── geo-attitude/   # <geo-attitude> symbol renderer (future)
+└── ...
+```
+
+The custom element imports only what it needs from `bearing/core`, keeping the bundle small. Users who want just the math can use `bearing/core` directly; users who want drop-in HTML elements get the custom elements.
+
 ---
 
 ## 4. Offline-First PWA Bundle
