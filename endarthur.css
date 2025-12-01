@@ -12,7 +12,7 @@ body {
     grid-template-areas: 
     "stereo intro intro"
     "stereo repos academic"
-    "stereo writting tools";
+    "stereo writing tools";
 }
 
 #intro-text {
@@ -27,8 +27,8 @@ body {
     grid-area: academic;
 }
 
-#writting {
-    grid-area: writting;
+#writing {
+    grid-area: writing;
 }
 
 #tools {
@@ -144,7 +144,7 @@ svg > g.stereo-element {
         "stereo stereo"
         "intro intro"
         "repos academic"
-        "writting writting"
+        "writing writing"
         "tools tools";
     }
 }
