@@ -55,10 +55,156 @@ Potential topics that would work beautifully in this format:
 You've built `autti.js` for attitudes and projections. There's an opportunity to create something like **MathJax but for geological notation**—a micro-library that renders:
 
 - Strike/dip symbols: `<geo-attitude dd="120" d="45">` → ⊥ with appropriate symbol
-- Stereonet thumbnails: `<geo-stereo data="120/45, 090/30">` → inline SVG
+- Stereonet thumbnails: `<stereo-net>` with CSV content → inline SVG
 - Structural symbols: `<geo-fold type="antiform" plunge="30">` → standard map symbol
 
 This could be a tiny library (~5KB) that geoscience bloggers/educators could drop into any page. It fills a gap—there's no easy way to put geological notation in web content.
+
+### `<stereo-net>` Custom Element Specification
+
+The simplest, most useful version: a tag whose content is treated as attitude data in CSV-like format:
+
+```html
+<stereo-net>
+120/45
+090/30
+045/60, line
+270/15, line
+</stereo-net>
+```
+
+Renders as an inline SVG stereonet with:
+- `120/45` and `090/30` as planes (great circles + poles)
+- `045/60` and `270/15` as lineations (points only)
+
+#### Full Syntax
+
+```html
+<stereo-net
+  width="200"
+  height="200"
+  projection="equal-area"
+  grid="true"
+  hemisphere="lower">
+
+  # Comments start with #
+  # Format: dip_direction/dip [, type] [, color] [, label]
+
+  # Planes (default) - shows great circle + pole
+  120/45
+  090/30, plane, red
+  045/75, plane, blue, S1
+
+  # Lines - shows point only
+  270/15, line
+  315/45, line, green, L1
+
+  # Pole only (no great circle)
+  180/60, pole, orange
+
+  # Can also use strike notation with 'rhr' flag
+  # 030/45 rhr = right-hand rule (dip to right of strike)
+
+</stereo-net>
+```
+
+#### Attributes
+
+| Attribute | Default | Description |
+|-----------|---------|-------------|
+| `width` | `150` | SVG width in pixels |
+| `height` | `150` | SVG height in pixels |
+| `projection` | `equal-area` | `equal-area` or `equal-angle` |
+| `grid` | `false` | Show reference grid |
+| `hemisphere` | `lower` | `lower` or `upper` |
+| `notation` | `dip-direction` | `dip-direction` or `strike-rhr` |
+
+#### Implementation Sketch
+
+```javascript
+class StereoNet extends HTMLElement {
+  connectedCallback() {
+    const width = parseInt(this.getAttribute('width') || '150');
+    const height = parseInt(this.getAttribute('height') || '150');
+    const showGrid = this.hasAttribute('grid');
+
+    // Parse content
+    const data = this.parseData(this.textContent);
+
+    // Build SVG using autti.js math
+    const svg = this.renderStereonet(data, { width, height, showGrid });
+
+    // Replace content with SVG
+    this.innerHTML = '';
+    this.appendChild(svg);
+  }
+
+  parseData(text) {
+    return text.trim().split('\n')
+      .filter(line => line.trim() && !line.startsWith('#'))
+      .map(line => {
+        const [attitude, type = 'plane', color = 'black', label = ''] =
+          line.split(',').map(s => s.trim());
+        const [dd, d] = attitude.split('/').map(Number);
+        return { dd, d, type, color, label };
+      });
+  }
+
+  renderStereonet(data, opts) {
+    // Use autti.js for projection math
+    // Return SVG element
+  }
+}
+
+customElements.define('stereo-net', StereoNet);
+```
+
+#### Usage in Documents
+
+Perfect for educational content:
+
+```html
+<p>The conjugate fault system shows two dominant orientations:</p>
+
+<stereo-net grid>
+  # Fault set A
+  045/60, plane, #e63946, A
+  050/58, plane, #e63946
+  040/62, plane, #e63946
+
+  # Fault set B
+  315/55, plane, #457b9d, B
+  320/52, plane, #457b9d
+  310/58, plane, #457b9d
+
+  # Slickenlines
+  045/45, line, #2a9d8f, slip
+  315/40, line, #2a9d8f
+</stereo-net>
+
+<p>The acute angle between sets suggests σ1 oriented roughly N-S.</p>
+```
+
+#### Bundle Size Target
+
+- Core (projection math): ~2KB minified
+- SVG rendering: ~2KB minified
+- Custom element wrapper: ~1KB minified
+- **Total: ~5KB** — smaller than most icons
+
+#### Distribution
+
+```html
+<!-- Drop-in script -->
+<script src="https://endarthur.github.io/stereo-net/stereo-net.min.js"></script>
+
+<!-- Or ES module -->
+<script type="module">
+  import 'https://endarthur.github.io/stereo-net/stereo-net.js';
+</script>
+```
+
+This would be genuinely useful for geology blogs, course materials, and Stack Exchange answers. Nobody's done it yet.
 
 ---
 
