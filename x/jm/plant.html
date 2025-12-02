@@ -1,0 +1,2425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Little Plant Friend</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#9cb686">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Plant Friend">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-soft: #f5f0eb;
+            --bg-card: #fdfbf9;
+            --accent-green: #9cb686;
+            --accent-green-dark: #7a9668;
+            --accent-pink: #e8b4b8;
+            --accent-lavender: #b8a9c9;
+            --accent-peach: #f0d9c8;
+            --text-soft: #5a5a5a;
+            --text-muted: #8a8a8a;
+            --pot-main: #d4a574;
+            --pot-dark: #b8956a;
+            --pot-light: #e8c4a0;
+            --soil: #8b7355;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--bg-soft) 0%, #ede4db 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: var(--text-soft);
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        h1 {
+            font-weight: 300;
+            font-size: 1.5rem;
+            color: var(--text-soft);
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .plant-name {
+            font-size: 1.1rem;
+            color: var(--accent-green-dark);
+            cursor: pointer;
+            padding: 5px 15px;
+            border-radius: 20px;
+            transition: background 0.3s;
+        }
+
+        .plant-name:hover {
+            background: rgba(156, 182, 134, 0.15);
+        }
+
+        .plant-container {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: 350px;
+        }
+
+        #plantCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #e8f4f8 0%, #f0f7f4 60%, var(--bg-card) 100%);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            color: var(--accent-green-dark);
+            font-weight: 500;
+        }
+
+        .message {
+            text-align: center;
+            font-style: italic;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            min-height: 2.5em;
+            padding: 10px;
+            line-height: 1.4;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dark) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(156, 182, 134, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-soft);
+            color: var(--text-soft);
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-peach);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.8rem;
+        }
+
+        .footer-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Debug panel */
+        .debug-panel {
+            background: rgba(0,0,0,0.03);
+            border: 1px dashed var(--text-muted);
+            border-radius: 12px;
+            padding: 15px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .debug-panel summary {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            user-select: none;
+        }
+
+        .debug-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .debug-controls button {
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            background: white;
+            border: 1px solid var(--text-muted);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .debug-controls button:hover {
+            background: var(--accent-peach);
+            border-color: var(--accent-green);
+        }
+
+        .debug-info {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+            font-family: monospace;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-soft);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-green) 0%, var(--accent-lavender) 100%);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal h2 {
+            font-weight: 400;
+            margin-bottom: 20px;
+            color: var(--text-soft);
+        }
+
+        .modal input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--bg-soft);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+
+        .modal input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-green);
+        }
+
+        .modal textarea {
+            width: 100%;
+            height: 150px;
+            padding: 12px 16px;
+            border: 2px solid var(--bg-soft);
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-family: monospace;
+            margin-bottom: 20px;
+            resize: vertical;
+        }
+
+        .modal textarea:focus {
+            outline: none;
+            border-color: var(--accent-green);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Particle effects */
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: float-up 2s ease-out forwards;
+        }
+
+        /* Milestone toast */
+        .milestone-toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: linear-gradient(135deg, var(--accent-lavender) 0%, var(--accent-pink) 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 200;
+            text-align: center;
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .milestone-toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .milestone-toast .milestone-icon {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .milestone-toast .milestone-title {
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .milestone-toast .milestone-desc {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin-top: 3px;
+        }
+
+        @keyframes float-up {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-60px) scale(0.5);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 400px) {
+            .container {
+                padding: 10px;
+            }
+
+            .plant-container {
+                padding: 20px;
+            }
+
+            .stats {
+                gap: 20px;
+            }
+
+            .btn {
+                padding: 10px 20px;
+            }
+        }
+
+        /* Gentle ambient animation */
+        @keyframes sway {
+            0%, 100% { transform: rotate(-1deg); }
+            50% { transform: rotate(1deg); }
+        }
+
+        .swaying {
+            animation: sway 4s ease-in-out infinite;
+            transform-origin: bottom center;
+        }
+
+        /* Reduce motion for users who prefer it */
+        @media (prefers-reduced-motion: reduce) {
+            .particle {
+                animation: none;
+                opacity: 0;
+            }
+            .milestone-toast {
+                transition: opacity 0.2s ease;
+            }
+            .swaying {
+                animation: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Your Little Plant Friend</h1>
+
+        <div class="plant-container">
+            <div class="plant-name" id="plantName" title="Click to rename">Little Sprout</div>
+
+            <div class="canvas-wrapper">
+                <canvas id="plantCanvas" width="350" height="350"></canvas>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Age</div>
+                    <div class="stat-value" id="ageDisplay">0 days</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Growth</div>
+                    <div class="stat-value" id="growthDisplay">Seed</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Family</div>
+                    <div class="stat-value" id="familyDisplay">1</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Love</div>
+                    <div class="stat-value" id="loveDisplay">0</div>
+                </div>
+            </div>
+
+            <div class="message" id="plantMessage">A tiny seed, full of potential...</div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" id="waterBtn">Water 💧</button>
+            <button class="btn btn-secondary" id="singBtn">Sing 🎵</button>
+            <button class="btn btn-secondary" id="talkBtn">Talk 💬</button>
+        </div>
+
+        <div class="footer-actions">
+            <button class="btn btn-secondary btn-small" id="pipBtn" title="Pop out to corner">Pop Out</button>
+            <button class="btn btn-secondary btn-small" id="shareBtn">Share</button>
+            <button class="btn btn-secondary btn-small" id="giftBtn">Gift</button>
+            <button class="btn btn-secondary btn-small" id="exportBtn">Export</button>
+            <button class="btn btn-secondary btn-small" id="importBtn">Import</button>
+        </div>
+
+        <!-- Debug Panel - hidden by default, call showDebug() in console to reveal -->
+        <details class="debug-panel hidden" id="debugPanel">
+            <summary>Debug Controls (dev only)</summary>
+            <div class="debug-controls">
+                <button id="debugGrow1">+1 Growth</button>
+                <button id="debugGrow5">+5 Growth</button>
+                <button id="debugMax">Max Growth</button>
+                <button id="debugReset">Reset to Seed</button>
+                <button id="debugNewPlant">New Random Plant</button>
+                <button id="debugAge1Day">+1 Day Age</button>
+                <button id="debugAge7Days">+7 Days Age</button>
+                <button id="debugSpawnBaby">Spawn Baby</button>
+                <button id="debugGrowBabies">Grow Babies</button>
+                <button id="debugClearBabies">Clear Babies</button>
+            </div>
+            <div class="debug-info" id="debugInfo"></div>
+        </details>
+    </div>
+
+    <!-- Rename Modal -->
+    <div class="modal-overlay hidden" id="renameModal">
+        <div class="modal">
+            <h2>Name your plant</h2>
+            <input type="text" id="nameInput" placeholder="Enter a name..." maxlength="20">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelRename">Cancel</button>
+                <button class="btn btn-primary" id="confirmRename">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal-overlay hidden" id="exportModal">
+        <div class="modal">
+            <h2>Export your plant</h2>
+            <p style="margin-bottom: 15px; color: var(--text-muted); font-size: 0.9rem;">
+                Copy this to save your plant and transfer it anywhere!
+            </p>
+            <textarea id="exportData" readonly></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="closeExport">Close</button>
+                <button class="btn btn-primary" id="copyExport">Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal-overlay hidden" id="importModal">
+        <div class="modal">
+            <h2>Import a plant</h2>
+            <p style="margin-bottom: 15px; color: var(--text-muted); font-size: 0.9rem;">
+                Paste your plant data here to bring it to this device!
+            </p>
+            <textarea id="importData" placeholder="Paste plant data here..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="closeImport">Cancel</button>
+                <button class="btn btn-primary" id="confirmImport">Import</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gift Modal -->
+    <div class="modal-overlay hidden" id="giftModal">
+        <div class="modal" style="text-align: center;">
+            <h2 style="font-weight: 300; margin-bottom: 10px;">Gift a Plant</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">
+                Create a special link with a personal message for someone you care about.
+            </p>
+            <textarea id="giftMessage" placeholder="Write your personal message here... 💚" style="
+                width: 100%;
+                height: 100px;
+                padding: 12px;
+                border: 2px solid var(--bg-soft);
+                border-radius: 12px;
+                font-size: 0.9rem;
+                font-family: inherit;
+                resize: vertical;
+                margin-bottom: 15px;
+            "></textarea>
+            <div id="giftLinkContainer" style="display: none; margin-bottom: 15px;">
+                <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px;">
+                    Their special link (the message will only show once):
+                </p>
+                <input type="text" id="giftLink" readonly style="
+                    width: 100%;
+                    padding: 10px;
+                    border: 2px solid var(--accent-green);
+                    border-radius: 8px;
+                    font-size: 0.75rem;
+                    font-family: monospace;
+                    background: var(--bg-soft);
+                ">
+            </div>
+            <div class="modal-actions" style="justify-content: center;">
+                <button class="btn btn-secondary" id="closeGift">Cancel</button>
+                <button class="btn btn-primary" id="generateGift">Create Link</button>
+                <button class="btn btn-primary hidden" id="copyGift">Copy Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome Modal -->
+    <div class="modal-overlay hidden" id="welcomeModal">
+        <div class="modal" style="text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 15px;">🌱</div>
+            <h2 style="font-weight: 300; margin-bottom: 15px;">A seed has been planted just for you</h2>
+            <!-- Personal message area - hidden by default -->
+            <div id="personalMessage" style="
+                background: linear-gradient(135deg, var(--accent-lavender) 0%, var(--accent-pink) 100%);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+                font-size: 0.95rem;
+                line-height: 1.5;
+                display: none;
+            "></div>
+            <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px;">
+                This little plant will grow alongside you, day by day.
+                It doesn't need much — just a little water, a song, or a kind word now and then.
+                <br><br>
+                But even if you forget, it will keep growing.
+                Some things in life just need time.
+            </p>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 25px; font-style: italic;">
+                Give it a name to begin your journey together.
+            </p>
+            <input type="text" id="welcomeNameInput" placeholder="Name your plant..." maxlength="20" style="
+                width: 100%;
+                padding: 12px 16px;
+                border: 2px solid var(--bg-soft);
+                border-radius: 12px;
+                font-size: 1rem;
+                font-family: inherit;
+                margin-bottom: 20px;
+                text-align: center;
+            ">
+            <button class="btn btn-primary" id="welcomeStart" style="width: 100%;">Begin</button>
+        </div>
+    </div>
+
+    <!-- Milestone Toast -->
+    <div class="milestone-toast" id="milestoneToast">
+        <div class="milestone-icon"></div>
+        <div class="milestone-title"></div>
+        <div class="milestone-desc"></div>
+    </div>
+
+    <script>
+        // ==========================================
+        // LZ-String compression (URL-safe variant)
+        // Minified from https://github.com/pieroxy/lz-string
+        // ==========================================
+        const LZString=function(){function o(o,r){if(!t[o]){t[o]={};for(var n=0;n<o.length;n++)t[o][o.charAt(n)]=n}return t[o][r]}var r=String.fromCharCode,n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",t={},e={compressToEncodedURIComponent:function(o){return null==o?"":e._compress(o,6,function(o){return n.charAt(o)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),e._decompress(r.length,32,function(t){return o(n,r.charAt(t))}))},_compress:function(o,n,t){if(null==o)return"";var e,i,s,u={},a={},p="",c="",l="",f=2,h=3,d=2,m=[],v=0,g=0;for(s=0;s<o.length;s+=1)if(p=o.charAt(s),Object.prototype.hasOwnProperty.call(u,p)||(u[p]=h++,a[p]=!0),c=l+p,Object.prototype.hasOwnProperty.call(u,c))l=c;else{if(Object.prototype.hasOwnProperty.call(a,l)){if(l.charCodeAt(0)<256){for(e=0;e<d;e++)v<<=1,g==n-1?(g=0,m.push(t(v)),v=0):g++;for(i=l.charCodeAt(0),e=0;e<8;e++)v=v<<1|1&i,g==n-1?(g=0,m.push(t(v)),v=0):g++,i>>=1}else{for(i=1,e=0;e<d;e++)v=v<<1|i,g==n-1?(g=0,m.push(t(v)),v=0):g++,i=0;for(i=l.charCodeAt(0),e=0;e<16;e++)v=v<<1|1&i,g==n-1?(g=0,m.push(t(v)),v=0):g++,i>>=1}0==--f&&(f=Math.pow(2,d),d++),delete a[l]}else for(i=u[l],e=0;e<d;e++)v=v<<1|1&i,g==n-1?(g=0,m.push(t(v)),v=0):g++,i>>=1;0==--f&&(f=Math.pow(2,d),d++),u[c]=h++,l=String(p)}if(""!==l){if(Object.prototype.hasOwnProperty.call(a,l)){if(l.charCodeAt(0)<256){for(e=0;e<d;e++)v<<=1,g==n-1?(g=0,m.push(t(v)),v=0):g++;for(i=l.charCodeAt(0),e=0;e<8;e++)v=v<<1|1&i,g==n-1?(g=0,m.push(t(v)),v=0):g++,i>>=1}else{for(i=1,e=0;e<d;e++)v=v<<1|i,g==n-1?(g=0,m.push(t(v)),v=0):g++,i=0;for(i=l.charCodeAt(0),e=0;e<16;e++)v=v<<1|1&i,g==n-1?(g=0,m.push(t(v)),v=0):g++,i>>=1}0==--f&&(f=Math.pow(2,d),d++),delete a[l]}else for(i=u[l],e=0;e<d;e++)v=v<<1|1&i,g==n-1?(g=0,m.push(t(v)),v=0):g++,i>>=1;0==--f&&(f=Math.pow(2,d),d++)}for(i=2,e=0;e<d;e++)v=v<<1|1&i,g==n-1?(g=0,m.push(t(v)),v=0):g++,i>>=1;for(;;){if(v<<=1,g==n-1){m.push(t(v));break}g++}return m.join("")},_decompress:function(o,n,t){var e,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:t(0),position:n,index:1};for(e=0;e<3;e+=1)l[e]=e;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=t(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=t(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=t(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=t(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=t(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=t(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return e}();
+
+        // ==========================================
+        // Stochastic L-System Plant Generator
+        // ==========================================
+
+        class StochasticLSystem {
+            constructor(seed) {
+                this.seed = seed;
+                this.rng = this.createRNG(seed);
+            }
+
+            // Seeded random number generator for reproducibility
+            createRNG(seed) {
+                let state = seed;
+                return () => {
+                    state = (state * 1103515245 + 12345) & 0x7fffffff;
+                    return state / 0x7fffffff;
+                };
+            }
+
+            // Reset RNG to initial state
+            reset() {
+                this.rng = this.createRNG(this.seed);
+            }
+
+            // Stochastic rules - each rule has weighted options
+            rules = {
+                'X': [
+                    { weight: 0.3, result: 'F[+X]F[-X]+X' },
+                    { weight: 0.25, result: 'F[-X]+X' },
+                    { weight: 0.25, result: 'F[+X]-X' },
+                    { weight: 0.1, result: 'F[+X][-X]FX' },
+                    { weight: 0.1, result: 'FF[+X][-X]' }
+                ],
+                'F': [
+                    { weight: 0.7, result: 'FF' },
+                    { weight: 0.2, result: 'F' },
+                    { weight: 0.1, result: 'FFF' }
+                ]
+            };
+
+            // Select a rule based on weights
+            selectRule(char) {
+                if (!this.rules[char]) return char;
+
+                const options = this.rules[char];
+                const rand = this.rng();
+                let cumulative = 0;
+
+                for (const option of options) {
+                    cumulative += option.weight;
+                    if (rand < cumulative) {
+                        return option.result;
+                    }
+                }
+
+                return options[options.length - 1].result;
+            }
+
+            // Generate the L-system string for a given number of iterations
+            generate(iterations) {
+                this.reset();
+                let current = 'X';
+
+                for (let i = 0; i < iterations; i++) {
+                    let next = '';
+                    for (const char of current) {
+                        next += this.selectRule(char);
+                    }
+                    current = next;
+
+                    // Limit string length to prevent performance issues
+                    if (current.length > 5000) {
+                        current = current.substring(0, 5000);
+                        break;
+                    }
+                }
+
+                return current;
+            }
+        }
+
+        // ==========================================
+        // Plant Renderer
+        // ==========================================
+
+        class PlantRenderer {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.width = canvas.width;
+                this.height = canvas.height;
+                this.time = 0;
+                this.animating = false;
+                // Respect prefers-reduced-motion
+                this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (e) => {
+                    this.reducedMotion = e.matches;
+                });
+            }
+
+            // Start gentle animation loop
+            startAnimation(renderCallback) {
+                if (this.animating) return;
+                this.animating = true;
+                this.renderCallback = renderCallback;
+
+                const animate = () => {
+                    if (!this.animating) return;
+                    this.time = Date.now() / 1000; // time in seconds
+                    this.renderCallback();
+                    this.animationId = setTimeout(() => animate(), 50); // ~20fps
+                };
+
+                animate();
+            }
+
+            stopAnimation() {
+                this.animating = false;
+                if (this.animationId) {
+                    clearTimeout(this.animationId);
+                }
+            }
+
+            // Get sway angle for leaves (slight extra wobble)
+            getLeafSway(seed, scale = 1.0) {
+                if (this.reducedMotion) return 0;
+                // Each leaf has slightly different timing based on seed
+                const phase = (seed * 1.7) % 6.28;
+                const speed = 1.2;
+                const sway = Math.sin(this.time * speed + phase) * 0.08;
+                return sway * scale;
+            }
+
+            // Get rotation angle for the whole plant (sway from base)
+            getSwayRotation(scale = 1.0) {
+                if (this.reducedMotion) return 0;
+                // Multiple sine waves for organic feel
+                const baseSpeed = 0.8;
+                const sway1 = Math.sin(this.time * baseSpeed) * 0.025;
+                const sway2 = Math.sin(this.time * baseSpeed * 1.7 + 1.2) * 0.012;
+                const sway3 = Math.sin(this.time * baseSpeed * 0.4 + 2.5) * 0.015;
+
+                // Occasional gentle gusts
+                const gustCycle = Math.sin(this.time * 0.25) * 0.5 + 0.5;
+                const gust = gustCycle * gustCycle * 0.3;
+
+                return (sway1 + sway2 + sway3) * (1 + gust) * scale;
+            }
+
+            // Color palette for the plant
+            getColors(growth) {
+                const stemColors = [
+                    '#9cb686', '#8faa7b', '#7d9a6a', '#6b8a59'
+                ];
+                const leafColors = [
+                    '#b5d4a3', '#a8cc94', '#9bc485', '#8ebc76'
+                ];
+                const flowerColors = [
+                    '#e8b4b8', '#f0c4c8', '#b8a9c9', '#c4b8d4', '#f0d9c8'
+                ];
+
+                return {
+                    stem: stemColors[Math.floor(growth / 3) % stemColors.length],
+                    leaf: leafColors[Math.floor(growth / 2) % leafColors.length],
+                    flower: flowerColors[growth % flowerColors.length]
+                };
+            }
+
+            // Draw the pot
+            drawPot() {
+                const ctx = this.ctx;
+                const centerX = this.width / 2;
+                const potTop = this.height - 60;
+                const potBottom = this.height - 15;
+                const potTopWidth = 70;
+                const potBottomWidth = 55;
+
+                // Pot body
+                ctx.beginPath();
+                ctx.moveTo(centerX - potTopWidth, potTop);
+                ctx.lineTo(centerX - potBottomWidth, potBottom);
+                ctx.lineTo(centerX + potBottomWidth, potBottom);
+                ctx.lineTo(centerX + potTopWidth, potTop);
+                ctx.closePath();
+
+                const potGradient = ctx.createLinearGradient(
+                    centerX - potTopWidth, potTop,
+                    centerX + potTopWidth, potTop
+                );
+                potGradient.addColorStop(0, '#c49a6c');
+                potGradient.addColorStop(0.3, '#e8c4a0');
+                potGradient.addColorStop(0.7, '#d4a574');
+                potGradient.addColorStop(1, '#b8956a');
+
+                ctx.fillStyle = potGradient;
+                ctx.fill();
+
+                // Pot rim
+                ctx.beginPath();
+                ctx.ellipse(centerX, potTop, potTopWidth + 5, 8, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#d4a574';
+                ctx.fill();
+
+                // Soil
+                ctx.beginPath();
+                ctx.ellipse(centerX, potTop, potTopWidth - 5, 6, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#8b7355';
+                ctx.fill();
+            }
+
+            // Draw a leaf
+            drawLeaf(x, y, angle, size, color) {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(
+                    size * 0.5, -size * 0.3,
+                    size, -size * 0.2,
+                    size * 1.2, 0
+                );
+                ctx.bezierCurveTo(
+                    size, size * 0.2,
+                    size * 0.5, size * 0.3,
+                    0, 0
+                );
+
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Leaf vein
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(size * 0.9, 0);
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            // Draw a flower
+            drawFlower(x, y, size, color) {
+                const ctx = this.ctx;
+                const petalCount = 5;
+
+                for (let i = 0; i < petalCount; i++) {
+                    const angle = (i / petalCount) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.ellipse(
+                        x + Math.cos(angle) * size * 0.4,
+                        y + Math.sin(angle) * size * 0.4,
+                        size * 0.5,
+                        size * 0.3,
+                        angle,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                }
+
+                // Center
+                ctx.beginPath();
+                ctx.arc(x, y, size * 0.25, 0, Math.PI * 2);
+                ctx.fillStyle = '#f5e6a3';
+                ctx.fill();
+            }
+
+            // Calculate plant geometry without drawing (for bounding box)
+            calculateGeometry(lSystemString, growth, rng) {
+                const baseLength = 2 + growth * 0.4;
+                const angleVariation = 25 * (Math.PI / 180);
+
+                let x = 0;
+                let y = 0;
+                let angle = -Math.PI / 2;
+
+                const stack = [];
+                const segments = [];
+                const leaves = [];
+                const flowers = [];
+
+                let minX = 0, maxX = 0, minY = 0, maxY = 0;
+
+                for (const char of lSystemString) {
+                    switch (char) {
+                        case 'F':
+                            const length = baseLength * (0.8 + rng() * 0.4);
+                            const newX = x + Math.cos(angle) * length;
+                            const newY = y + Math.sin(angle) * length;
+
+                            segments.push({
+                                x1: x, y1: y, x2: newX, y2: newY,
+                                depth: stack.length
+                            });
+
+                            x = newX;
+                            y = newY;
+
+                            minX = Math.min(minX, x);
+                            maxX = Math.max(maxX, x);
+                            minY = Math.min(minY, y);
+                            maxY = Math.max(maxY, y);
+                            break;
+
+                        case '+':
+                            angle += angleVariation * (0.7 + rng() * 0.6);
+                            break;
+
+                        case '-':
+                            angle -= angleVariation * (0.7 + rng() * 0.6);
+                            break;
+
+                        case '[':
+                            stack.push({ x, y, angle });
+                            if (growth > 2 && rng() > 0.6) {
+                                leaves.push({ x, y, angle: angle + (rng() - 0.5) });
+                            }
+                            break;
+
+                        case ']':
+                            if (rng() > 0.7) {
+                                flowers.push({ x, y });
+                            }
+                            if (stack.length > 0) {
+                                const state = stack.pop();
+                                x = state.x;
+                                y = state.y;
+                                angle = state.angle;
+                            }
+                            break;
+
+                        case 'X':
+                            if (growth > 1 && rng() > 0.5) {
+                                leaves.push({ x, y, angle: angle + (rng() - 0.5) * 0.5 });
+                            }
+                            break;
+                    }
+                }
+
+                // Add padding for leaves and flowers
+                const padding = 15 + growth * 2;
+                minX -= padding;
+                maxX += padding;
+                minY -= padding;
+
+                return {
+                    segments, leaves, flowers,
+                    bounds: { minX, maxX, minY, maxY }
+                };
+            }
+
+            // Render a single plant (used for both main and babies)
+            // swayScale: 1.0 for main plant, less for babies
+            renderSinglePlant(lSystemString, growth, hasFlowers, offsetX, scale, maxHeight, swayScale = 1.0) {
+                const ctx = this.ctx;
+
+                // Soil level - where plants emerge from
+                const soilLevel = this.height - 62;
+
+                if (growth < 0.5 || !lSystemString) {
+                    // Just a tiny seed bump in the soil
+                    ctx.beginPath();
+                    ctx.ellipse(offsetX, soilLevel, 3 * scale, 1.5 * scale, 0, 0, Math.PI * 2);
+                    ctx.fillStyle = '#6b5a45';
+                    ctx.fill();
+                    return;
+                }
+
+                // Create a seeded RNG for consistent geometry
+                let rngState = 12345;
+                const rng = () => {
+                    rngState = (rngState * 1103515245 + 12345) & 0x7fffffff;
+                    return rngState / 0x7fffffff;
+                };
+
+                const geometry = this.calculateGeometry(lSystemString, growth, rng);
+                const { segments, leaves, flowers, bounds } = geometry;
+
+                // Calculate scale to fit within available space
+                const availableHeight = Math.min(maxHeight, soilLevel - 25);
+                const availableWidth = 100 * scale;
+
+                const plantHeight = Math.max(1, -bounds.minY);
+                const plantWidth = bounds.maxX - bounds.minX;
+
+                let plantScale = Math.min(
+                    availableWidth / Math.max(plantWidth, 1),
+                    availableHeight / Math.max(plantHeight, 1)
+                );
+
+                // Apply the base scale factor
+                plantScale *= scale;
+
+                // Cap scaling based on growth stage
+                const maxScale = scale * (growth <= 3 ? 1.3 : growth <= 6 ? 1.1 : 1.0);
+                plantScale = Math.min(plantScale, maxScale);
+
+                const centerOffsetX = offsetX - (bounds.minX + bounds.maxX) / 2 * plantScale;
+                const offsetY = soilLevel;
+
+                const colors = this.getColors(Math.floor(growth));
+
+                // Apply rotation around plant base for natural sway
+                const swayAngle = this.getSwayRotation(swayScale);
+                ctx.save();
+                ctx.translate(offsetX, offsetY);
+                ctx.rotate(swayAngle);
+                ctx.translate(-offsetX, -offsetY);
+
+                // Draw stems - width grows with plant growth
+                ctx.lineCap = 'round';
+                const growthFactor = 0.4 + (growth / 15) * 0.8; // 0.4 at growth=0, 1.2 at max
+                for (const seg of segments) {
+                    ctx.beginPath();
+                    ctx.moveTo(seg.x1 * plantScale + centerOffsetX, seg.y1 * plantScale + offsetY);
+                    ctx.lineTo(seg.x2 * plantScale + centerOffsetX, seg.y2 * plantScale + offsetY);
+                    ctx.strokeStyle = colors.stem;
+                    ctx.lineWidth = Math.max(0.5, (2.5 - seg.depth * 0.3) * plantScale * growthFactor);
+                    ctx.stroke();
+                }
+
+                // Draw leaves with individual wobble
+                const leafSize = (3 + growth * 0.4) * plantScale;
+                for (let i = 0; i < leaves.length; i++) {
+                    const leaf = leaves[i];
+                    const leafWobble = this.getLeafSway(i, swayScale);
+
+                    this.drawLeaf(
+                        leaf.x * plantScale + centerOffsetX,
+                        leaf.y * plantScale + offsetY,
+                        leaf.angle + leafWobble,
+                        leafSize,
+                        colors.leaf
+                    );
+                }
+
+                // Draw flowers
+                if (hasFlowers) {
+                    const flowerSize = (3.5 + growth * 0.2) * plantScale;
+                    for (const flower of flowers) {
+                        this.drawFlower(
+                            flower.x * plantScale + centerOffsetX,
+                            flower.y * plantScale + offsetY,
+                            flowerSize,
+                            colors.flower
+                        );
+                    }
+                }
+
+                ctx.restore();
+            }
+
+            // Get background colors based on time of day
+            getTimeOfDayColors() {
+                const hour = new Date().getHours();
+
+                // Night: 10pm-5am
+                if (hour >= 22 || hour < 5) {
+                    return {
+                        top: '#2d3a4a',
+                        mid: '#3d4a5a',
+                        bottom: '#4a5568'
+                    };
+                }
+                // Dawn: 5am-7am
+                if (hour >= 5 && hour < 7) {
+                    return {
+                        top: '#7a6a8a',
+                        mid: '#c4a0a8',
+                        bottom: '#e8c4b8'
+                    };
+                }
+                // Morning: 7am-9am
+                if (hour >= 7 && hour < 9) {
+                    return {
+                        top: '#b8d4e8',
+                        mid: '#e0e8e4',
+                        bottom: '#f5f0eb'
+                    };
+                }
+                // Day: 9am-5pm
+                if (hour >= 9 && hour < 17) {
+                    return {
+                        top: '#e8f4f8',
+                        mid: '#f0f7f4',
+                        bottom: '#fdfbf9'
+                    };
+                }
+                // Evening: 5pm-8pm
+                if (hour >= 17 && hour < 20) {
+                    return {
+                        top: '#d4a8a8',
+                        mid: '#e8c8b8',
+                        bottom: '#f0e0d4'
+                    };
+                }
+                // Dusk: 8pm-10pm
+                return {
+                    top: '#5a5878',
+                    mid: '#7a6878',
+                    bottom: '#9a8898'
+                };
+            }
+
+            // Render the plant from L-system string
+            // finalBounds: pre-generated bounds for stable positioning
+            render(lSystemString, growth, hasFlowers = false, babies = [], finalBounds = null) {
+                this.finalBounds = finalBounds; // Store for use in main plant rendering
+                const ctx = this.ctx;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, this.width, this.height);
+
+                // Draw background gradient based on time of day
+                const timeColors = this.getTimeOfDayColors();
+                const bgGradient = ctx.createLinearGradient(0, 0, 0, this.height);
+                bgGradient.addColorStop(0, timeColors.top);
+                bgGradient.addColorStop(0.6, timeColors.mid);
+                bgGradient.addColorStop(1, timeColors.bottom);
+                ctx.fillStyle = bgGradient;
+                ctx.fillRect(0, 0, this.width, this.height);
+
+                // Draw pot first
+                this.drawPot();
+
+                const centerX = this.width / 2;
+                const soilLevel = this.height - 62;
+                const maxMainHeight = soilLevel - 20;
+
+                // Draw baby plants (sorted by depth, back to front)
+                // Babies in back are drawn first and appear smaller
+                for (const baby of babies) {
+                    const babyX = centerX + baby.xOffset * 55;
+                    // Scale based on depth (back = smaller, front = larger)
+                    // At max growth (8), babies reach ~1/3 the main plant's visual size
+                    const depthScale = 0.25 + (baby.depth || 0.85) * 0.15; // 0.4 to 0.55
+                    const babyMaxHeight = (60 + baby.growth * 15) * depthScale * 2;
+                    // Babies sway less than main plant (0.3-0.5 based on depth)
+                    const babySwayScale = 0.3 + (baby.depth || 0.85) * 0.2;
+                    this.renderSinglePlant(
+                        baby.lString,
+                        baby.growth,
+                        baby.hasFlowers,
+                        babyX,
+                        depthScale,
+                        babyMaxHeight,
+                        babySwayScale
+                    );
+                }
+
+                // Draw main plant
+                if (growth === 0 && babies.length === 0) {
+                    // Just a seed - draw a tiny bump in the soil
+                    ctx.beginPath();
+                    ctx.ellipse(centerX, soilLevel, 4, 2, 0, 0, Math.PI * 2);
+                    ctx.fillStyle = '#6b5a45';
+                    ctx.fill();
+                    return;
+                }
+
+                if (growth > 0) {
+                    // Create a seeded RNG for consistent geometry
+                    let rngState = 12345;
+                    const rng = () => {
+                        rngState = (rngState * 1103515245 + 12345) & 0x7fffffff;
+                        return rngState / 0x7fffffff;
+                    };
+
+                    // Calculate geometry for current growth stage
+                    const geometry = this.calculateGeometry(lSystemString, growth, rng);
+                    const { segments, leaves, flowers } = geometry;
+
+                    // Use FINAL bounds (pre-generated) for consistent positioning/scaling
+                    // This prevents the plant from moving around as it grows
+                    const bounds = this.finalBounds || geometry.bounds;
+
+                    // Calculate scale to fit plant in available space
+                    const availableHeight = maxMainHeight;
+                    const availableWidth = this.width - 40;
+
+                    // Scale based on final bounds - this stays constant throughout growth
+                    const scale = Math.min(
+                        availableWidth / Math.max(bounds.maxX - bounds.minX, 1),
+                        availableHeight / Math.max(-bounds.minY, 1)
+                    );
+
+                    const offsetX = centerX - (bounds.minX + bounds.maxX) / 2 * scale;
+                    const offsetY = soilLevel;
+
+                    const colors = this.getColors(growth);
+
+                    // Apply rotation around plant base for natural sway
+                    const swayAngle = this.getSwayRotation(1.0);
+                    ctx.save();
+                    ctx.translate(centerX, offsetY);
+                    ctx.rotate(swayAngle);
+                    ctx.translate(-centerX, -offsetY);
+
+                    // Draw stems - width grows with plant growth, not just scale
+                    ctx.lineCap = 'round';
+                    const growthFactor = 0.4 + (growth / 15) * 0.8; // 0.4 at growth=0, 1.2 at growth=15
+                    for (const seg of segments) {
+                        ctx.beginPath();
+                        ctx.moveTo(seg.x1 * scale + offsetX, seg.y1 * scale + offsetY);
+                        ctx.lineTo(seg.x2 * scale + offsetX, seg.y2 * scale + offsetY);
+                        ctx.strokeStyle = colors.stem;
+                        ctx.lineWidth = Math.max(1, (3 - seg.depth * 0.4) * scale * growthFactor);
+                        ctx.stroke();
+                    }
+
+                    // Draw leaves with individual wobble
+                    const leafSize = (4 + growth * 0.6) * Math.min(scale, 1.3);
+                    for (let i = 0; i < leaves.length; i++) {
+                        const leaf = leaves[i];
+                        const leafWobble = this.getLeafSway(i, 1.0);
+
+                        this.drawLeaf(
+                            leaf.x * scale + offsetX,
+                            leaf.y * scale + offsetY,
+                            leaf.angle + leafWobble,
+                            leafSize,
+                            colors.leaf
+                        );
+                    }
+
+                    // Draw flowers
+                    if (hasFlowers) {
+                        const flowerSize = (5 + growth * 0.3) * Math.min(scale, 1.2);
+                        for (const flower of flowers) {
+                            this.drawFlower(
+                                flower.x * scale + offsetX,
+                                flower.y * scale + offsetY,
+                                flowerSize,
+                                colors.flower
+                            );
+                        }
+                    }
+
+                    ctx.restore();
+                }
+            }
+        }
+
+        // ==========================================
+        // Plant State Manager
+        // ==========================================
+
+        class Plant {
+            constructor() {
+                this.state = this.loadState() || this.createNewPlant();
+                this.lSystem = new StochasticLSystem(this.state.seed);
+
+                // Migrate old saves: generate fullLString and finalBounds if missing
+                if (!this.state.fullLString || !this.state.finalBounds) {
+                    this.state.fullLString = this.lSystem.generate(6);
+                    this.state.finalBounds = this.calculateFinalBounds(this.state.fullLString, 15);
+                }
+
+                this.canvas = document.getElementById('plantCanvas');
+                this.renderer = new PlantRenderer(this.canvas);
+
+                this.messages = {
+                    seed: [
+                        "A tiny seed, full of potential...",
+                        "Something wonderful is about to begin.",
+                        "In this small seed, dreams await."
+                    ],
+                    sprout: [
+                        "A tiny sprout emerges! Hello, world!",
+                        "The first leaves unfurl with curiosity.",
+                        "Growing, slowly but surely."
+                    ],
+                    young: [
+                        "Getting stronger every day!",
+                        "The stem reaches toward the light.",
+                        "Each day brings new growth."
+                    ],
+                    growing: [
+                        "Flourishing beautifully!",
+                        "What lovely leaves you have!",
+                        "Growing with grace and joy."
+                    ],
+                    mature: [
+                        "A beautiful, thriving plant!",
+                        "Standing tall and proud.",
+                        "Full of life and love."
+                    ],
+                    flowering: [
+                        "Flowers bloom! What beauty!",
+                        "Sharing joy with the world.",
+                        "A masterpiece of nature."
+                    ],
+                    family: [
+                        "The family grows together!",
+                        "Look at all these little ones!",
+                        "A beautiful plant family.",
+                        "Growing stronger together.",
+                        "The pot is full of love!"
+                    ],
+                    watered: [
+                        "Ahh, refreshing! Thank you!",
+                        "That hit the spot!",
+                        "Feeling hydrated and happy!"
+                    ],
+                    sang: [
+                        "What a lovely melody!",
+                        "Music makes everything grow!",
+                        "Swaying to the rhythm..."
+                    ],
+                    talked: [
+                        "It's so nice to chat with you!",
+                        "Your words are like sunshine.",
+                        "Tell me more about your day!"
+                    ]
+                };
+
+                // Milestone definitions
+                this.milestonesDef = [
+                    { id: 'first_sprout', icon: '🌱', title: 'First Sprout!', desc: 'Your plant has begun to grow', check: (s) => s.growth >= 1 },
+                    { id: 'one_week', icon: '📅', title: 'One Week Together', desc: 'A week of companionship', check: (s) => (Date.now() - s.birthTime) >= 7 * 24 * 60 * 60 * 1000 },
+                    { id: 'first_bloom', icon: '🌸', title: 'First Bloom!', desc: 'Flowers have appeared', check: (s) => s.growth >= 13 },
+                    { id: 'first_baby', icon: '👶', title: 'New Life!', desc: 'A baby plant has sprouted', check: (s) => s.babies && s.babies.length >= 1 },
+                    { id: 'two_weeks', icon: '💕', title: 'Two Weeks Together', desc: 'Growing stronger each day', check: (s) => (Date.now() - s.birthTime) >= 14 * 24 * 60 * 60 * 1000 },
+                    { id: 'full_bloom', icon: '✨', title: 'Full Bloom!', desc: 'Your plant has reached its full glory', check: (s) => s.growth >= 15 },
+                    { id: 'full_family', icon: '👨‍👩‍👧‍👦', title: 'Full Family!', desc: 'Five little ones in the pot', check: (s) => s.babies && s.babies.length >= 5 },
+                    { id: 'one_month', icon: '🌟', title: 'One Month Together', desc: 'A month of growth and love', check: (s) => (Date.now() - s.birthTime) >= 30 * 24 * 60 * 60 * 1000 },
+                    { id: 'much_love', icon: '💖', title: 'So Much Love!', desc: '100 moments of care', check: (s) => s.love >= 100 },
+                ];
+
+                this.init();
+            }
+
+            createNewPlant() {
+                const seed = Math.floor(Math.random() * 2147483647);
+
+                // Pre-generate the full plant to know final size
+                const lSystem = new StochasticLSystem(seed);
+                const maxIterations = 6;
+                const fullLString = lSystem.generate(maxIterations);
+
+                // Calculate final bounds using a dummy render
+                const finalBounds = this.calculateFinalBounds(fullLString, 15);
+
+                return {
+                    seed: seed,
+                    name: "Little Sprout",
+                    birthTime: Date.now(),
+                    lastVisit: Date.now(),
+                    growth: 0,
+                    love: 0,
+                    lastWatered: 0,
+                    interactions: 0,
+                    // Pre-generated plant data for stable rendering
+                    fullLString: fullLString,
+                    finalBounds: finalBounds,
+                    // Baby plants that sprout after main plant is mature
+                    babies: [],
+                    lastBabyTime: 0,
+                    // First-time experience
+                    welcomed: false,
+                    // Milestones tracking
+                    milestones: []
+                };
+            }
+
+            // Calculate the final bounding box for a fully grown plant
+            calculateFinalBounds(lString, growth) {
+                const baseLength = 2 + growth * 0.4;
+                const angleVariation = 25 * (Math.PI / 180);
+
+                let x = 0, y = 0, angle = -Math.PI / 2;
+                let minX = 0, maxX = 0, minY = 0, maxY = 0;
+                const stack = [];
+
+                // Use consistent RNG for geometry calculation
+                let rngState = 12345;
+                const rng = () => {
+                    rngState = (rngState * 1103515245 + 12345) & 0x7fffffff;
+                    return rngState / 0x7fffffff;
+                };
+
+                for (const char of lString) {
+                    switch (char) {
+                        case 'F':
+                            const length = baseLength * (0.8 + rng() * 0.4);
+                            x += Math.cos(angle) * length;
+                            y += Math.sin(angle) * length;
+                            minX = Math.min(minX, x);
+                            maxX = Math.max(maxX, x);
+                            minY = Math.min(minY, y);
+                            maxY = Math.max(maxY, y);
+                            break;
+                        case '+':
+                            angle += angleVariation * (0.7 + rng() * 0.6);
+                            break;
+                        case '-':
+                            angle -= angleVariation * (0.7 + rng() * 0.6);
+                            break;
+                        case '[':
+                            stack.push({ x, y, angle });
+                            break;
+                        case ']':
+                            if (stack.length > 0) {
+                                const state = stack.pop();
+                                x = state.x;
+                                y = state.y;
+                                angle = state.angle;
+                            }
+                            break;
+                    }
+                }
+
+                // Add padding for leaves and flowers
+                const padding = 20;
+                return {
+                    minX: minX - padding,
+                    maxX: maxX + padding,
+                    minY: minY - padding,
+                    maxY: maxY
+                };
+            }
+
+            loadState() {
+                try {
+                    const saved = localStorage.getItem('myPlantFriend');
+                    return saved ? JSON.parse(saved) : null;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            saveState() {
+                try {
+                    localStorage.setItem('myPlantFriend', JSON.stringify(this.state));
+                } catch (e) {
+                    console.warn('Could not save plant state');
+                }
+            }
+
+            init() {
+                this.updateGrowth();
+                this.render();
+                this.updateUI();
+                this.bindEvents();
+
+                // Show welcome modal for first-time users
+                if (!this.state.welcomed) {
+                    this.showWelcome();
+                }
+
+                // Start gentle sway animation
+                this.renderer.startAnimation(() => this.render());
+
+                // Auto-save and update every minute
+                setInterval(() => {
+                    this.updateGrowth();
+                    this.checkMilestones();
+                    this.updateUI();
+                    this.saveState();
+                }, 60000);
+
+                // Check milestones on load (after a short delay to not overwhelm)
+                setTimeout(() => this.checkMilestones(), 1500);
+
+                // Save on visibility change, pause animation when hidden
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        this.renderer.stopAnimation();
+                        this.saveState();
+                    } else {
+                        this.updateGrowth();
+                        this.updateUI();
+                        this.renderer.startAnimation(() => this.render());
+                    }
+                });
+            }
+
+            updateGrowth() {
+                const now = Date.now();
+                const timeSinceLastVisit = now - this.state.lastVisit;
+
+                // Passive growth: 1 growth point per 12 hours (~7.5 days to full bloom)
+                const growthInterval = 12 * 60 * 60 * 1000;
+                const passiveGrowth = Math.floor(timeSinceLastVisit / growthInterval);
+
+                if (passiveGrowth > 0) {
+                    this.state.growth = Math.min(15, this.state.growth + passiveGrowth);
+                    this.state.lastVisit = now - (timeSinceLastVisit % growthInterval);
+                }
+
+                // Baby plant spawning: once main plant is mature (growth >= 12)
+                // a new baby can appear every 2-3 days
+                if (this.state.growth >= 12) {
+                    const babyInterval = 2.5 * 24 * 60 * 60 * 1000; // 2.5 days
+                    const timeSinceLastBaby = now - (this.state.lastBabyTime || this.state.birthTime);
+
+                    // Max 5 babies to keep it manageable
+                    if (timeSinceLastBaby >= babyInterval && (!this.state.babies || this.state.babies.length < 5)) {
+                        this.spawnBaby();
+                    }
+                }
+
+                // Update baby growth too
+                if (this.state.babies) {
+                    for (const baby of this.state.babies) {
+                        const babyAge = now - baby.birthTime;
+                        // Babies grow to about 1/3 parent size (max 8) over ~8 days
+                        baby.growth = Math.min(8, babyAge / (24 * 60 * 60 * 1000));
+                    }
+                }
+            }
+
+            spawnBaby() {
+                // Create a baby with a mutated seed from parent
+                const parentSeed = this.state.seed;
+                const mutation = Math.floor(Math.random() * 1000000);
+                const babySeed = (parentSeed + mutation) & 0x7fffffff;
+
+                // Position babies naturally around the pot with depth
+                const existingCount = this.state.babies ? this.state.babies.length : 0;
+                // Positions: [x, depth] where depth affects size and draw order
+                const positionOptions = [
+                    { x: -0.7, depth: 0.8 },   // left back
+                    { x: 0.7, depth: 0.85 },   // right back
+                    { x: -0.4, depth: 0.95 },  // left front
+                    { x: 0.5, depth: 1.0 },    // right front
+                    { x: 0, depth: 0.75 },     // center back
+                ];
+                const pos = positionOptions[existingCount] || {
+                    x: (Math.random() - 0.5) * 1.2,
+                    depth: 0.7 + Math.random() * 0.3
+                };
+
+                if (!this.state.babies) this.state.babies = [];
+
+                this.state.babies.push({
+                    seed: babySeed,
+                    birthTime: Date.now(),
+                    growth: 0,
+                    xOffset: pos.x,
+                    depth: pos.depth  // affects size and draw order
+                });
+
+                this.state.lastBabyTime = Date.now();
+                this.showMessage("A tiny sprout has appeared! Your plant family grows!");
+                this.saveState();
+            }
+
+            getGrowthStage() {
+                const g = this.state.growth;
+                if (g === 0) return 'seed';
+                if (g <= 2) return 'sprout';
+                if (g <= 5) return 'young';
+                if (g <= 9) return 'growing';
+                if (g <= 12) return 'mature';
+                return 'flowering';
+            }
+
+            getGrowthLabel() {
+                const stages = {
+                    seed: 'Seed',
+                    sprout: 'Sprout',
+                    young: 'Seedling',
+                    growing: 'Growing',
+                    mature: 'Thriving',
+                    flowering: 'Blooming'
+                };
+                return stages[this.getGrowthStage()];
+            }
+
+            getAgeDisplay() {
+                const ageMs = Date.now() - this.state.birthTime;
+                const days = Math.floor(ageMs / (24 * 60 * 60 * 1000));
+                const hours = Math.floor((ageMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+
+                if (days === 0 && hours === 0) return 'Just born';
+                if (days === 0) return `${hours}h`;
+                if (days === 1) return '1 day';
+                return `${days} days`;
+            }
+
+            getMessage(type = null) {
+                // Sometimes show family message if there are babies
+                if (!type && this.state.babies && this.state.babies.length > 0 && Math.random() > 0.6) {
+                    const msgs = this.messages.family;
+                    return msgs[Math.floor(Math.random() * msgs.length)];
+                }
+
+                const stage = type || this.getGrowthStage();
+                const msgs = this.messages[stage] || this.messages.seed;
+                return msgs[Math.floor(Math.random() * msgs.length)];
+            }
+
+            render() {
+                const iterations = Math.min(6, Math.floor(this.state.growth / 2) + 1);
+                const lString = this.state.growth > 0 ? this.lSystem.generate(iterations) : '';
+                const hasFlowers = this.state.growth >= 13;
+
+                // Collect baby plant data for rendering, with depth info
+                const babies = (this.state.babies || []).map(baby => {
+                    const babyLSystem = new StochasticLSystem(baby.seed);
+                    // More iterations for bigger babies (up to 4 iterations)
+                    const babyIterations = Math.min(4, Math.floor(baby.growth / 2) + 1);
+                    return {
+                        lString: baby.growth > 0.5 ? babyLSystem.generate(babyIterations) : '',
+                        growth: baby.growth,
+                        xOffset: baby.xOffset,
+                        depth: baby.depth || 0.85, // fallback for old saves
+                        hasFlowers: baby.growth >= 6
+                    };
+                });
+
+                // Sort by depth so back plants draw first
+                babies.sort((a, b) => a.depth - b.depth);
+
+                this.renderer.render(lString, this.state.growth, hasFlowers, babies, this.state.finalBounds);
+            }
+
+            updateUI() {
+                document.getElementById('plantName').textContent = this.state.name;
+                document.getElementById('ageDisplay').textContent = this.getAgeDisplay();
+                document.getElementById('growthDisplay').textContent = this.getGrowthLabel();
+                document.getElementById('loveDisplay').textContent = this.state.love;
+                document.getElementById('plantMessage').textContent = this.getMessage();
+
+                // Family count (main plant + babies)
+                const babyCount = this.state.babies ? this.state.babies.length : 0;
+                document.getElementById('familyDisplay').textContent = 1 + babyCount;
+
+                // Progress bar (growth out of 15)
+                const progress = (this.state.growth / 15) * 100;
+                document.getElementById('progressFill').style.width = `${progress}%`;
+            }
+
+            // Care actions
+            water() {
+                const now = Date.now();
+                const cooldown = 30 * 60 * 1000; // 30 minutes
+
+                if (now - this.state.lastWatered < cooldown) {
+                    this.showMessage("Still nicely hydrated, thank you!");
+                    return;
+                }
+
+                this.state.lastWatered = now;
+                this.state.growth = Math.min(15, this.state.growth + 0.5);
+                this.state.love++;
+                this.state.interactions++;
+
+                this.createParticles('💧');
+                this.showMessage(this.getMessage('watered'));
+                this.render();
+                this.updateUI();
+                this.checkMilestones();
+                this.saveState();
+            }
+
+            sing() {
+                this.state.love++;
+                this.state.interactions++;
+                this.state.growth = Math.min(15, this.state.growth + 0.1);
+
+                this.createParticles('🎵');
+                this.showMessage(this.getMessage('sang'));
+                this.render();
+                this.updateUI();
+                this.checkMilestones();
+                this.saveState();
+            }
+
+            talk() {
+                this.state.love++;
+                this.state.interactions++;
+                this.state.growth = Math.min(15, this.state.growth + 0.1);
+
+                this.createParticles('💚');
+                this.showMessage(this.getMessage('talked'));
+                this.render();
+                this.updateUI();
+                this.checkMilestones();
+                this.saveState();
+            }
+
+            showMessage(msg) {
+                const el = document.getElementById('plantMessage');
+                el.style.opacity = 0;
+                setTimeout(() => {
+                    el.textContent = msg;
+                    el.style.opacity = 1;
+                }, 200);
+            }
+
+            showWelcome() {
+                const modal = document.getElementById('welcomeModal');
+                const input = document.getElementById('welcomeNameInput');
+
+                // Check for personal message in URL fragment
+                const hash = window.location.hash.slice(1);
+                if (hash && hash.length > 1) {
+                    try {
+                        const format = hash.charAt(0);
+                        const data = hash.slice(1);
+                        let message = null;
+
+                        if (format === 'z') {
+                            // LZ-String compressed
+                            message = LZString.decompressFromEncodedURIComponent(data);
+                        } else if (format === 'b') {
+                            // Base64 encoded
+                            message = decodeURIComponent(escape(atob(data)));
+                        } else {
+                            // Legacy format (try LZ first, then base64)
+                            message = LZString.decompressFromEncodedURIComponent(hash);
+                            if (!message) {
+                                message = decodeURIComponent(escape(atob(hash)));
+                            }
+                        }
+
+                        if (message) {
+                            const personalEl = document.getElementById('personalMessage');
+                            personalEl.textContent = message;
+                            personalEl.style.display = 'block';
+                        }
+                        // Clear the hash so it's not visible/shareable
+                        history.replaceState(null, '', window.location.pathname);
+                    } catch (e) {
+                        // Invalid hash, ignore
+                    }
+                }
+
+                modal.classList.remove('hidden');
+                setTimeout(() => input.focus(), 100);
+            }
+
+            completeWelcome(name) {
+                if (name && name.trim()) {
+                    this.state.name = name.trim().substring(0, 20);
+                }
+                this.state.welcomed = true;
+                this.updateUI();
+                this.saveState();
+                document.getElementById('welcomeModal').classList.add('hidden');
+                this.showMessage("Welcome, little one. Let's grow together.");
+            }
+
+            checkMilestones() {
+                if (!this.state.milestones) this.state.milestones = [];
+
+                for (const milestone of this.milestonesDef) {
+                    if (!this.state.milestones.includes(milestone.id) && milestone.check(this.state)) {
+                        this.state.milestones.push(milestone.id);
+                        this.showMilestone(milestone);
+                        this.saveState();
+                        break; // Only show one milestone at a time
+                    }
+                }
+            }
+
+            showMilestone(milestone) {
+                const toast = document.getElementById('milestoneToast');
+                toast.querySelector('.milestone-icon').textContent = milestone.icon;
+                toast.querySelector('.milestone-title').textContent = milestone.title;
+                toast.querySelector('.milestone-desc').textContent = milestone.desc;
+
+                toast.classList.add('show');
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            }
+
+            async openPictureInPicture() {
+                // Check for Document PiP support
+                if (!('documentPictureInPicture' in window)) {
+                    this.showMessage("Pop-out isn't supported in this browser");
+                    return;
+                }
+
+                try {
+                    // Open PiP window
+                    const pipWindow = await documentPictureInPicture.requestWindow({
+                        width: 260,
+                        height: 340,
+                    });
+
+                    // Copy styles to PiP window
+                    const style = pipWindow.document.createElement('style');
+                    style.textContent = `
+                        * {
+                            box-sizing: border-box;
+                        }
+                        body {
+                            margin: 0;
+                            padding: 8px;
+                            background: linear-gradient(135deg, #f5f0eb 0%, #ede4db 100%);
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            font-family: 'Segoe UI', system-ui, sans-serif;
+                            height: 100vh;
+                            overflow: hidden;
+                        }
+                        canvas {
+                            width: 220px;
+                            height: 220px;
+                            border-radius: 12px;
+                            flex-shrink: 0;
+                        }
+                        .pip-name {
+                            margin-top: 6px;
+                            color: #7a9668;
+                            font-size: 14px;
+                            text-align: center;
+                        }
+                        .pip-actions {
+                            display: flex;
+                            gap: 10px;
+                            margin-top: 8px;
+                            padding-bottom: 8px;
+                        }
+                        .pip-btn {
+                            width: 40px;
+                            height: 40px;
+                            border: none;
+                            border-radius: 50%;
+                            font-size: 18px;
+                            cursor: pointer;
+                            background: linear-gradient(135deg, #9cb686 0%, #7a9668 100%);
+                            color: white;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        }
+                        .pip-btn:hover {
+                            transform: scale(1.1);
+                        }
+                    `;
+                    pipWindow.document.head.appendChild(style);
+
+                    // Create canvas in PiP window
+                    const pipCanvas = pipWindow.document.createElement('canvas');
+                    pipCanvas.width = 220;
+                    pipCanvas.height = 220;
+                    pipWindow.document.body.appendChild(pipCanvas);
+
+                    // Add plant name
+                    const nameEl = pipWindow.document.createElement('div');
+                    nameEl.className = 'pip-name';
+                    nameEl.textContent = this.state.name;
+                    pipWindow.document.body.appendChild(nameEl);
+
+                    // Add care buttons
+                    const actions = pipWindow.document.createElement('div');
+                    actions.className = 'pip-actions';
+                    actions.innerHTML = `
+                        <button class="pip-btn" id="pipWater">💧</button>
+                        <button class="pip-btn" id="pipSing">🎵</button>
+                        <button class="pip-btn" id="pipTalk">💬</button>
+                    `;
+                    pipWindow.document.body.appendChild(actions);
+
+                    // Wire up buttons
+                    pipWindow.document.getElementById('pipWater').onclick = () => {
+                        this.water();
+                        nameEl.textContent = this.state.name;
+                    };
+                    pipWindow.document.getElementById('pipSing').onclick = () => {
+                        this.sing();
+                        nameEl.textContent = this.state.name;
+                    };
+                    pipWindow.document.getElementById('pipTalk').onclick = () => {
+                        this.talk();
+                        nameEl.textContent = this.state.name;
+                    };
+
+                    // Create renderer for PiP
+                    const pipRenderer = new PlantRenderer(pipCanvas);
+
+                    // Animation loop for PiP
+                    const animatePip = () => {
+                        if (pipWindow.closed) return;
+
+                        pipRenderer.time = Date.now() / 1000;
+
+                        const iterations = Math.min(6, Math.floor(this.state.growth / 2) + 1);
+                        const lString = this.state.growth > 0 ? this.lSystem.generate(iterations) : '';
+                        const hasFlowers = this.state.growth >= 13;
+
+                        const babies = (this.state.babies || []).map(baby => {
+                            const babyLSystem = new StochasticLSystem(baby.seed);
+                            const babyIterations = Math.min(4, Math.floor(baby.growth / 2) + 1);
+                            return {
+                                lString: baby.growth > 0.5 ? babyLSystem.generate(babyIterations) : '',
+                                growth: baby.growth,
+                                xOffset: baby.xOffset,
+                                depth: baby.depth || 0.85,
+                                hasFlowers: baby.growth >= 6
+                            };
+                        }).sort((a, b) => a.depth - b.depth);
+
+                        pipRenderer.render(lString, this.state.growth, hasFlowers, babies, this.state.finalBounds);
+                        nameEl.textContent = this.state.name;
+
+                        setTimeout(() => requestAnimationFrame(animatePip), 50);
+                    };
+
+                    animatePip();
+                    this.showMessage("Your plant is now in the corner!");
+
+                } catch (e) {
+                    console.error('PiP failed:', e);
+                    this.showMessage("Couldn't open pop-out window");
+                }
+            }
+
+            async shareImage() {
+                // Create a higher-res canvas for sharing
+                const shareCanvas = document.createElement('canvas');
+                shareCanvas.width = 700;
+                shareCanvas.height = 700;
+                const shareRenderer = new PlantRenderer(shareCanvas);
+                shareRenderer.time = this.renderer.time;
+
+                // Render plant at higher res
+                const iterations = Math.min(6, Math.floor(this.state.growth / 2) + 1);
+                const lString = this.state.growth > 0 ? this.lSystem.generate(iterations) : '';
+                const hasFlowers = this.state.growth >= 13;
+
+                const babies = (this.state.babies || []).map(baby => {
+                    const babyLSystem = new StochasticLSystem(baby.seed);
+                    const babyIterations = Math.min(4, Math.floor(baby.growth / 2) + 1);
+                    return {
+                        lString: baby.growth > 0.5 ? babyLSystem.generate(babyIterations) : '',
+                        growth: baby.growth,
+                        xOffset: baby.xOffset,
+                        depth: baby.depth || 0.85,
+                        hasFlowers: baby.growth >= 6
+                    };
+                }).sort((a, b) => a.depth - b.depth);
+
+                shareRenderer.render(lString, this.state.growth, hasFlowers, babies, this.state.finalBounds);
+
+                // Add plant name at bottom
+                const ctx = shareCanvas.getContext('2d');
+                ctx.font = '20px "Segoe UI", system-ui, sans-serif';
+                ctx.fillStyle = '#5a5a5a';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.state.name, shareCanvas.width / 2, shareCanvas.height - 25);
+
+                // Convert to blob
+                const blob = await new Promise(resolve => shareCanvas.toBlob(resolve, 'image/png'));
+
+                // Try Web Share API first (works on mobile)
+                if (navigator.share && navigator.canShare) {
+                    const file = new File([blob], `${this.state.name}.png`, { type: 'image/png' });
+                    const shareData = { files: [file] };
+
+                    if (navigator.canShare(shareData)) {
+                        try {
+                            await navigator.share(shareData);
+                            this.showMessage('Shared with love!');
+                            return;
+                        } catch (e) {
+                            if (e.name !== 'AbortError') {
+                                console.log('Share failed, falling back to download');
+                            } else {
+                                return; // User cancelled
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: download the image
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${this.state.name}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showMessage('Image saved!');
+            }
+
+            createParticles(emoji) {
+                const wrapper = document.querySelector('.canvas-wrapper');
+
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        const particle = document.createElement('div');
+                        particle.className = 'particle';
+                        particle.textContent = emoji;
+                        particle.style.left = `${30 + Math.random() * 40}%`;
+                        particle.style.top = `${40 + Math.random() * 30}%`;
+                        particle.style.fontSize = `${16 + Math.random() * 10}px`;
+                        wrapper.appendChild(particle);
+
+                        setTimeout(() => particle.remove(), 2000);
+                    }, i * 100);
+                }
+            }
+
+            rename(newName) {
+                if (newName && newName.trim()) {
+                    this.state.name = newName.trim().substring(0, 20);
+                    this.updateUI();
+                    this.saveState();
+                }
+            }
+
+            exportState() {
+                return JSON.stringify(this.state, null, 2);
+            }
+
+            importState(jsonString) {
+                try {
+                    const newState = JSON.parse(jsonString);
+
+                    // Validate required fields
+                    if (typeof newState.seed !== 'number' ||
+                        typeof newState.birthTime !== 'number' ||
+                        typeof newState.growth !== 'number') {
+                        throw new Error('Invalid plant data');
+                    }
+
+                    // Regenerate fullLString and finalBounds if missing (backwards compatibility)
+                    let fullLString = newState.fullLString;
+                    let finalBounds = newState.finalBounds;
+
+                    if (!fullLString || !finalBounds) {
+                        const lSystem = new StochasticLSystem(newState.seed);
+                        fullLString = lSystem.generate(6);
+                        finalBounds = this.calculateFinalBounds(fullLString, 15);
+                    }
+
+                    this.state = {
+                        seed: newState.seed,
+                        name: newState.name || 'Little Sprout',
+                        birthTime: newState.birthTime,
+                        lastVisit: Date.now(),
+                        growth: Math.max(0, Math.min(15, newState.growth)),
+                        love: newState.love || 0,
+                        lastWatered: newState.lastWatered || 0,
+                        interactions: newState.interactions || 0,
+                        fullLString: fullLString,
+                        finalBounds: finalBounds,
+                        babies: newState.babies || [],
+                        lastBabyTime: newState.lastBabyTime || 0
+                    };
+
+                    this.lSystem = new StochasticLSystem(this.state.seed);
+                    this.render();
+                    this.updateUI();
+                    this.saveState();
+
+                    return true;
+                } catch (e) {
+                    console.error('Import failed:', e);
+                    return false;
+                }
+            }
+
+            bindEvents() {
+                // Care buttons
+                document.getElementById('waterBtn').addEventListener('click', () => this.water());
+                document.getElementById('singBtn').addEventListener('click', () => this.sing());
+                document.getElementById('talkBtn').addEventListener('click', () => this.talk());
+
+                // Share and PiP buttons
+                document.getElementById('shareBtn').addEventListener('click', () => this.shareImage());
+                document.getElementById('pipBtn').addEventListener('click', () => this.openPictureInPicture());
+
+                // Gift modal
+                const giftModal = document.getElementById('giftModal');
+                const giftMessage = document.getElementById('giftMessage');
+                const giftLink = document.getElementById('giftLink');
+                const giftLinkContainer = document.getElementById('giftLinkContainer');
+                const generateGiftBtn = document.getElementById('generateGift');
+                const copyGiftBtn = document.getElementById('copyGift');
+
+                document.getElementById('giftBtn').addEventListener('click', () => {
+                    giftMessage.value = '';
+                    giftLink.value = '';
+                    giftLinkContainer.style.display = 'none';
+                    generateGiftBtn.classList.remove('hidden');
+                    copyGiftBtn.classList.add('hidden');
+                    giftModal.classList.remove('hidden');
+                    giftMessage.focus();
+                });
+
+                document.getElementById('closeGift').addEventListener('click', () => {
+                    giftModal.classList.add('hidden');
+                });
+
+                generateGiftBtn.addEventListener('click', () => {
+                    const message = giftMessage.value.trim();
+                    if (!message) {
+                        giftMessage.placeholder = 'Please write a message first! 💚';
+                        giftMessage.focus();
+                        return;
+                    }
+
+                    // Try LZ compression, use simpler encoding if it's not shorter
+                    const lzCompressed = LZString.compressToEncodedURIComponent(message);
+                    const b64Encoded = btoa(unescape(encodeURIComponent(message)));
+
+                    // Use whichever is shorter, with prefix to identify format
+                    let encoded;
+                    if (lzCompressed.length < b64Encoded.length) {
+                        encoded = 'z' + lzCompressed; // z = lz-compressed
+                    } else {
+                        encoded = 'b' + b64Encoded;   // b = base64
+                    }
+
+                    const url = window.location.origin + window.location.pathname + '#' + encoded;
+
+                    giftLink.value = url;
+                    giftLinkContainer.style.display = 'block';
+                    generateGiftBtn.classList.add('hidden');
+                    copyGiftBtn.classList.remove('hidden');
+                });
+
+                copyGiftBtn.addEventListener('click', () => {
+                    giftLink.select();
+                    navigator.clipboard.writeText(giftLink.value).then(() => {
+                        copyGiftBtn.textContent = 'Copied!';
+                        setTimeout(() => {
+                            copyGiftBtn.textContent = 'Copy Link';
+                            giftModal.classList.add('hidden');
+                            this.showMessage('Gift link copied! Share it with someone special 💚');
+                        }, 1000);
+                    });
+                });
+
+                // Rename modal
+                const renameModal = document.getElementById('renameModal');
+                const nameInput = document.getElementById('nameInput');
+
+                document.getElementById('plantName').addEventListener('click', () => {
+                    nameInput.value = this.state.name;
+                    renameModal.classList.remove('hidden');
+                    nameInput.focus();
+                    nameInput.select();
+                });
+
+                document.getElementById('cancelRename').addEventListener('click', () => {
+                    renameModal.classList.add('hidden');
+                });
+
+                document.getElementById('confirmRename').addEventListener('click', () => {
+                    this.rename(nameInput.value);
+                    renameModal.classList.add('hidden');
+                });
+
+                nameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.rename(nameInput.value);
+                        renameModal.classList.add('hidden');
+                    }
+                });
+
+                // Export modal
+                const exportModal = document.getElementById('exportModal');
+                const exportData = document.getElementById('exportData');
+
+                document.getElementById('exportBtn').addEventListener('click', () => {
+                    exportData.value = this.exportState();
+                    exportModal.classList.remove('hidden');
+                });
+
+                document.getElementById('closeExport').addEventListener('click', () => {
+                    exportModal.classList.add('hidden');
+                });
+
+                document.getElementById('copyExport').addEventListener('click', () => {
+                    exportData.select();
+                    navigator.clipboard.writeText(exportData.value).then(() => {
+                        document.getElementById('copyExport').textContent = 'Copied!';
+                        setTimeout(() => {
+                            document.getElementById('copyExport').textContent = 'Copy';
+                        }, 2000);
+                    });
+                });
+
+                // Import modal
+                const importModal = document.getElementById('importModal');
+                const importData = document.getElementById('importData');
+
+                document.getElementById('importBtn').addEventListener('click', () => {
+                    importData.value = '';
+                    importModal.classList.remove('hidden');
+                    importData.focus();
+                });
+
+                document.getElementById('closeImport').addEventListener('click', () => {
+                    importModal.classList.add('hidden');
+                });
+
+                document.getElementById('confirmImport').addEventListener('click', () => {
+                    if (this.importState(importData.value)) {
+                        importModal.classList.add('hidden');
+                        this.showMessage('Welcome to your new home, little plant!');
+                    } else {
+                        alert('Could not import plant data. Please check the format and try again.');
+                    }
+                });
+
+                // Welcome modal
+                const welcomeInput = document.getElementById('welcomeNameInput');
+                document.getElementById('welcomeStart').addEventListener('click', () => {
+                    this.completeWelcome(welcomeInput.value);
+                });
+                welcomeInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.completeWelcome(welcomeInput.value);
+                    }
+                });
+
+                // Close modals on overlay click (but not welcome modal)
+                document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                    overlay.addEventListener('click', (e) => {
+                        if (e.target === overlay && overlay.id !== 'welcomeModal') {
+                            overlay.classList.add('hidden');
+                        }
+                    });
+                });
+
+                // Close modals on Escape key (but not welcome modal)
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        document.querySelectorAll('.modal-overlay').forEach(m => {
+                            if (m.id !== 'welcomeModal') {
+                                m.classList.add('hidden');
+                            }
+                        });
+                    }
+                });
+
+                // Debug controls
+                this.bindDebugControls();
+            }
+
+            bindDebugControls() {
+                const updateDebugInfo = () => {
+                    const info = document.getElementById('debugInfo');
+                    if (info) {
+                        const babyCount = this.state.babies ? this.state.babies.length : 0;
+                        info.textContent = `Seed: ${this.state.seed} | Growth: ${this.state.growth.toFixed(1)}/15 | Babies: ${babyCount}/5 | Love: ${this.state.love}`;
+                    }
+                };
+
+                updateDebugInfo();
+
+                document.getElementById('debugGrow1')?.addEventListener('click', () => {
+                    this.state.growth = Math.min(15, this.state.growth + 1);
+                    this.render();
+                    this.updateUI();
+                    this.saveState();
+                    updateDebugInfo();
+                });
+
+                document.getElementById('debugGrow5')?.addEventListener('click', () => {
+                    this.state.growth = Math.min(15, this.state.growth + 5);
+                    this.render();
+                    this.updateUI();
+                    this.saveState();
+                    updateDebugInfo();
+                });
+
+                document.getElementById('debugMax')?.addEventListener('click', () => {
+                    this.state.growth = 15;
+                    this.render();
+                    this.updateUI();
+                    this.saveState();
+                    updateDebugInfo();
+                });
+
+                document.getElementById('debugReset')?.addEventListener('click', () => {
+                    this.state.growth = 0;
+                    this.state.love = 0;
+                    this.state.interactions = 0;
+                    this.state.lastWatered = 0;
+                    this.state.babies = [];
+                    this.state.lastBabyTime = 0;
+                    this.render();
+                    this.updateUI();
+                    this.saveState();
+                    updateDebugInfo();
+                });
+
+                document.getElementById('debugNewPlant')?.addEventListener('click', () => {
+                    this.state = this.createNewPlant();
+                    this.lSystem = new StochasticLSystem(this.state.seed);
+                    this.render();
+                    this.updateUI();
+                    this.saveState();
+                    updateDebugInfo();
+                    this.showMessage('A brand new seed appears!');
+                });
+
+                document.getElementById('debugAge1Day')?.addEventListener('click', () => {
+                    this.state.birthTime -= 24 * 60 * 60 * 1000;
+                    this.updateUI();
+                    this.saveState();
+                    updateDebugInfo();
+                });
+
+                document.getElementById('debugAge7Days')?.addEventListener('click', () => {
+                    this.state.birthTime -= 7 * 24 * 60 * 60 * 1000;
+                    this.updateUI();
+                    this.saveState();
+                    updateDebugInfo();
+                });
+
+                document.getElementById('debugSpawnBaby')?.addEventListener('click', () => {
+                    if (!this.state.babies || this.state.babies.length < 5) {
+                        this.spawnBaby();
+                        this.render();
+                        updateDebugInfo();
+                    } else {
+                        this.showMessage("The pot is full of babies!");
+                    }
+                });
+
+                document.getElementById('debugGrowBabies')?.addEventListener('click', () => {
+                    if (this.state.babies && this.state.babies.length > 0) {
+                        const now = Date.now();
+                        for (const baby of this.state.babies) {
+                            baby.growth = Math.min(8, baby.growth + 2);
+                            // Adjust birthTime to match new growth (so it persists after refresh)
+                            // Formula: growth = (now - birthTime) / dayMs, so birthTime = now - growth * dayMs
+                            const dayMs = 24 * 60 * 60 * 1000;
+                            baby.birthTime = now - baby.growth * dayMs;
+                        }
+                        this.render();
+                        this.saveState();
+                        updateDebugInfo();
+                        this.showMessage("Babies are growing!");
+                    }
+                });
+
+                document.getElementById('debugClearBabies')?.addEventListener('click', () => {
+                    this.state.babies = [];
+                    this.state.lastBabyTime = 0;
+                    this.render();
+                    this.updateUI();
+                    this.saveState();
+                    updateDebugInfo();
+                    this.showMessage("Babies cleared.");
+                });
+            }
+        }
+
+        // ==========================================
+        // Initialize
+        // ==========================================
+
+        const plant = new Plant();
+
+        // Debug console function - call showDebug() in browser console to reveal debug panel
+        window.showDebug = () => {
+            document.getElementById('debugPanel').classList.remove('hidden');
+            console.log('Debug panel revealed!');
+        };
+        window.hideDebug = () => {
+            document.getElementById('debugPanel').classList.add('hidden');
+            console.log('Debug panel hidden.');
+        };
+
+        // Register Service Worker for offline support
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {
+                // Service worker registration failed - that's okay, app still works
+            });
+        }
+
+        // Helper to generate personalized links (run in console):
+        // generatePersonalLink("Your personal message here")
+        window.generatePersonalLink = (message) => {
+            const lz = LZString.compressToEncodedURIComponent(message);
+            const b64 = btoa(unescape(encodeURIComponent(message)));
+            const encoded = lz.length < b64.length ? 'z' + lz : 'b' + b64;
+            const url = window.location.origin + window.location.pathname + '#' + encoded;
+            console.log('Personal link:', url);
+            console.log('Message:', message.length, 'chars → Hash:', encoded.length, 'chars');
+            console.log('(LZ:', lz.length, '| B64:', b64.length, '| Used:', encoded.charAt(0) === 'z' ? 'LZ' : 'B64', ')');
+            return url;
+        };
+    </script>
+</body>
+</html>
