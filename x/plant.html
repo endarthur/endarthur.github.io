@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Eternal Plant</title>
+    <style>
+        :root {
+            --bg-primary: #fdf6f0;
+            --bg-secondary: #fff9f5;
+            --accent-green: #98c9a3;
+            --accent-green-dark: #7bb389;
+            --accent-pink: #f4c4c4;
+            --accent-lavender: #d4c4e8;
+            --accent-sky: #c4dde8;
+            --text-primary: #5a5a5a;
+            --text-secondary: #8a8a8a;
+            --pot-terracotta: #d4a574;
+            --pot-shadow: #b8956a;
+            --soil: #8b6f5c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: var(--text-primary);
+        }
+
+        h1 {
+            font-weight: 300;
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            color: var(--accent-green-dark);
+            letter-spacing: 0.05em;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .plant-container {
+            position: relative;
+            width: min(90vw, 400px);
+            height: min(70vh, 500px);
+            background: linear-gradient(180deg, var(--accent-sky) 0%, var(--bg-secondary) 60%);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #plantCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+        }
+
+        .stat {
+            background: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-icon {
+            font-size: 1.1rem;
+        }
+
+        .message {
+            text-align: center;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            min-height: 1.5em;
+            font-style: italic;
+            transition: opacity 0.3s ease;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: white;
+            border: 2px solid var(--accent-green);
+            color: var(--accent-green-dark);
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: var(--accent-green);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(152, 201, 163, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .secondary-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .secondary-actions button {
+            background: var(--bg-secondary);
+            border-color: var(--accent-lavender);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            font-size: 0.8rem;
+        }
+
+        .secondary-actions button:hover {
+            background: var(--accent-lavender);
+            color: var(--text-primary);
+            border-color: var(--accent-lavender);
+        }
+
+        .plant-name-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #plantName {
+            font-size: 1.2rem;
+            color: var(--accent-green-dark);
+            border: none;
+            border-bottom: 2px dashed var(--accent-green);
+            background: transparent;
+            text-align: center;
+            padding: 5px 10px;
+            font-family: inherit;
+            max-width: 200px;
+        }
+
+        #plantName:focus {
+            outline: none;
+            border-bottom-style: solid;
+        }
+
+        .hidden-input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .growth-bar-container {
+            width: min(90vw, 300px);
+            margin-bottom: 20px;
+        }
+
+        .growth-bar-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .growth-bar {
+            height: 8px;
+            background: rgba(152, 201, 163, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .growth-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-green) 0%, var(--accent-green-dark) 100%);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        .sparkle {
+            position: absolute;
+            pointer-events: none;
+            font-size: 1.5rem;
+            animation: sparkle 0.8s ease-out forwards;
+        }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 1.4rem; }
+            .plant-container {
+                height: min(60vh, 400px);
+            }
+            button {
+                padding: 10px 18px;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Your Eternal Plant</h1>
+    <p class="subtitle">it grows with time, and blooms with love</p>
+
+    <div class="plant-name-container">
+        <input type="text" id="plantName" value="Little Sprout" maxlength="20">
+    </div>
+
+    <div class="plant-container" id="plantContainer">
+        <canvas id="plantCanvas"></canvas>
+    </div>
+
+    <div class="growth-bar-container">
+        <div class="growth-bar-label">Growth Progress</div>
+        <div class="growth-bar">
+            <div class="growth-bar-fill" id="growthBar"></div>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat"><span class="stat-icon">🌱</span> Age: <span id="ageDisplay">0 days</span></div>
+        <div class="stat"><span class="stat-icon">💧</span> Watered: <span id="waterCount">0</span></div>
+        <div class="stat"><span class="stat-icon">☀️</span> Sunlight: <span id="sunCount">0</span></div>
+        <div class="stat"><span class="stat-icon">💬</span> Chats: <span id="talkCount">0</span></div>
+    </div>
+
+    <p class="message" id="message">Your plant is happy to see you!</p>
+
+    <div class="actions">
+        <button onclick="water()"><span>💧</span> Water</button>
+        <button onclick="giveSun()"><span>☀️</span> Sunlight</button>
+        <button onclick="talk()"><span>💬</span> Talk</button>
+    </div>
+
+    <div class="secondary-actions">
+        <button onclick="exportPlant()"><span>📤</span> Export</button>
+        <button onclick="document.getElementById('importInput').click()"><span>📥</span> Import</button>
+        <button onclick="newPlant()"><span>🌱</span> New Plant</button>
+    </div>
+
+    <input type="file" id="importInput" class="hidden-input" accept=".json" onchange="importPlant(event)">
+
+    <script>
+        // ============================================
+        // Stochastic L-System Plant Generator
+        // ============================================
+
+        const canvas = document.getElementById('plantCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('plantContainer');
+
+        // Plant state
+        let plant = {
+            seed: Math.random() * 1000000,
+            name: 'Little Sprout',
+            createdAt: Date.now(),
+            lastVisit: Date.now(),
+            growthPoints: 0,
+            waterCount: 0,
+            sunCount: 0,
+            talkCount: 0,
+            lSystemState: null
+        };
+
+        // Seeded random number generator for reproducible randomness
+        function seededRandom(seed) {
+            const x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+
+        // L-System configuration
+        const lSystemConfig = {
+            axiom: 'X',
+            // Stochastic rules - multiple possible outcomes per symbol
+            rules: {
+                'X': [
+                    { weight: 0.35, result: 'F[+X][-X]FX' },
+                    { weight: 0.25, result: 'F[-X]F[+X]X' },
+                    { weight: 0.20, result: 'F[+X]F[-X]' },
+                    { weight: 0.15, result: 'FF[+X][-X]' },
+                    { weight: 0.05, result: 'F[++X][--X]FX' }
+                ],
+                'F': [
+                    { weight: 0.7, result: 'FF' },
+                    { weight: 0.2, result: 'F' },
+                    { weight: 0.1, result: 'FFF' }
+                ]
+            },
+            angle: 25,
+            angleVariation: 8,
+            lengthFactor: 0.85,
+            initialLength: 8
+        };
+
+        // Generate L-System string with stochastic rules
+        function generateLSystem(iterations, seed) {
+            let current = lSystemConfig.axiom;
+            let randomState = seed;
+
+            for (let i = 0; i < iterations; i++) {
+                let next = '';
+                for (const char of current) {
+                    if (lSystemConfig.rules[char]) {
+                        const rules = lSystemConfig.rules[char];
+                        const rand = seededRandom(randomState++);
+                        let cumulative = 0;
+                        let chosen = rules[0].result;
+
+                        for (const rule of rules) {
+                            cumulative += rule.weight;
+                            if (rand < cumulative) {
+                                chosen = rule.result;
+                                break;
+                            }
+                        }
+                        next += chosen;
+                    } else {
+                        next += char;
+                    }
+                }
+                current = next;
+
+                // Limit string length to prevent performance issues
+                if (current.length > 5000) {
+                    current = current.substring(0, 5000);
+                    break;
+                }
+            }
+            return { lString: current, randomState };
+        }
+
+        // Draw plant using turtle graphics
+        function drawPlant() {
+            // Handle high DPI displays
+            const rect = container.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            ctx.scale(dpr, dpr);
+
+            const width = rect.width;
+            const height = rect.height;
+
+            // Clear and draw background
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw pot
+            const potWidth = width * 0.35;
+            const potHeight = height * 0.15;
+            const potX = (width - potWidth) / 2;
+            const potY = height - potHeight - 20;
+
+            // Pot body
+            ctx.fillStyle = '#d4a574';
+            ctx.beginPath();
+            ctx.moveTo(potX, potY);
+            ctx.lineTo(potX + potWidth, potY);
+            ctx.lineTo(potX + potWidth - 15, potY + potHeight);
+            ctx.lineTo(potX + 15, potY + potHeight);
+            ctx.closePath();
+            ctx.fill();
+
+            // Pot rim
+            ctx.fillStyle = '#c49464';
+            ctx.fillRect(potX - 5, potY - 8, potWidth + 10, 12);
+            ctx.fillStyle = '#e4b484';
+            ctx.fillRect(potX - 5, potY - 8, potWidth + 10, 4);
+
+            // Soil
+            ctx.fillStyle = '#8b6f5c';
+            ctx.beginPath();
+            ctx.ellipse(width / 2, potY, potWidth / 2 - 5, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Calculate growth level (iterations)
+            const growthLevel = getGrowthLevel();
+            const iterations = Math.min(Math.floor(growthLevel / 100) + 1, 7);
+
+            if (growthLevel < 10) {
+                // Draw seed/tiny sprout
+                drawSeed(width / 2, potY - 5, growthLevel);
+                return;
+            }
+
+            // Generate and draw L-System plant
+            const { lString, randomState } = generateLSystem(iterations, plant.seed);
+            plant.lSystemState = randomState;
+
+            // Turtle state
+            let x = width / 2;
+            let y = potY - 5;
+            let angle = -90; // Start pointing up
+            const stack = [];
+
+            // Calculate length based on growth
+            const baseLength = lSystemConfig.initialLength * (0.5 + (growthLevel % 100) / 200);
+            let length = baseLength;
+            let thickness = Math.max(1, 3 + iterations * 0.8);
+
+            // Color gradient based on growth
+            const stemHue = 100 + seededRandom(plant.seed * 7) * 20;
+            const leafHue = 90 + seededRandom(plant.seed * 13) * 40;
+
+            let randomIndex = plant.seed * 1000;
+
+            for (const char of lString) {
+                switch (char) {
+                    case 'F':
+                        // Draw stem segment
+                        const endX = x + Math.cos(angle * Math.PI / 180) * length;
+                        const endY = y + Math.sin(angle * Math.PI / 180) * length;
+
+                        ctx.strokeStyle = `hsl(${stemHue}, 35%, ${35 + stack.length * 3}%)`;
+                        ctx.lineWidth = Math.max(1, thickness - stack.length * 0.5);
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(endX, endY);
+                        ctx.stroke();
+
+                        x = endX;
+                        y = endY;
+                        break;
+
+                    case '+':
+                        angle += lSystemConfig.angle + (seededRandom(randomIndex++) - 0.5) * lSystemConfig.angleVariation;
+                        break;
+
+                    case '-':
+                        angle -= lSystemConfig.angle + (seededRandom(randomIndex++) - 0.5) * lSystemConfig.angleVariation;
+                        break;
+
+                    case '[':
+                        stack.push({ x, y, angle, length, thickness });
+                        length *= lSystemConfig.lengthFactor;
+                        thickness *= 0.8;
+                        break;
+
+                    case ']':
+                        // Draw leaf at branch end sometimes
+                        if (stack.length > 1 && seededRandom(randomIndex++) > 0.4) {
+                            drawLeaf(x, y, angle, leafHue, seededRandom(randomIndex++));
+                        }
+
+                        // Draw flower at high growth levels
+                        if (growthLevel > 400 && stack.length > 2 && seededRandom(randomIndex++) > 0.7) {
+                            drawFlower(x, y, seededRandom(randomIndex++) * 360);
+                        }
+
+                        const state = stack.pop();
+                        if (state) {
+                            x = state.x;
+                            y = state.y;
+                            angle = state.angle;
+                            length = state.length;
+                            thickness = state.thickness;
+                        }
+                        break;
+
+                    case 'X':
+                        // Growth point - draw tiny leaf
+                        if (growthLevel > 50 && seededRandom(randomIndex++) > 0.5) {
+                            drawLeaf(x, y, angle, leafHue, seededRandom(randomIndex++) * 0.5 + 0.3);
+                        }
+                        break;
+                }
+            }
+        }
+
+        function drawSeed(x, y, growth) {
+            // Tiny sprout emerging
+            const sproutHeight = growth * 0.5;
+
+            if (growth > 5) {
+                ctx.strokeStyle = '#7bb389';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x, y - sproutHeight);
+                ctx.stroke();
+
+                // Tiny leaves
+                if (growth > 7) {
+                    ctx.fillStyle = '#98c9a3';
+                    ctx.beginPath();
+                    ctx.ellipse(x - 3, y - sproutHeight, 4, 2, -0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.ellipse(x + 3, y - sproutHeight, 4, 2, 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else {
+                // Just a seed
+                ctx.fillStyle = '#8b6f5c';
+                ctx.beginPath();
+                ctx.ellipse(x, y - 2, 3, 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawLeaf(x, y, angle, hue, size) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate((angle + 90) * Math.PI / 180);
+
+            const leafSize = 8 + size * 10;
+            ctx.fillStyle = `hsla(${hue}, 45%, 55%, 0.85)`;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(leafSize / 2, -leafSize / 3, leafSize, 0);
+            ctx.quadraticCurveTo(leafSize / 2, leafSize / 3, 0, 0);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawFlower(x, y, hueOffset) {
+            const petalColors = [
+                '#f4c4c4', // pink
+                '#d4c4e8', // lavender
+                '#f4e4c4', // cream
+                '#c4dde8', // sky
+                '#e8c4d4'  // rose
+            ];
+            const color = petalColors[Math.floor(seededRandom(plant.seed + hueOffset) * petalColors.length)];
+            const petalCount = 5 + Math.floor(seededRandom(plant.seed + hueOffset + 1) * 3);
+            const petalSize = 4 + seededRandom(plant.seed + hueOffset + 2) * 4;
+
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Petals
+            for (let i = 0; i < petalCount; i++) {
+                ctx.rotate((Math.PI * 2) / petalCount);
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.ellipse(0, -petalSize, petalSize * 0.4, petalSize, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Center
+            ctx.fillStyle = '#f4e4a4';
+            ctx.beginPath();
+            ctx.arc(0, 0, petalSize * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // ============================================
+        // Plant Care & Growth Logic
+        // ============================================
+
+        function getGrowthLevel() {
+            // Base growth from time (very slow passive growth)
+            const ageInHours = (Date.now() - plant.createdAt) / (1000 * 60 * 60);
+            const timeGrowth = Math.sqrt(ageInHours) * 10;
+
+            // Growth from care actions (meaningful but not required)
+            const careGrowth = plant.growthPoints;
+
+            return Math.floor(timeGrowth + careGrowth);
+        }
+
+        function getProgressToNextLevel() {
+            const growth = getGrowthLevel();
+            const currentLevel = Math.floor(growth / 100);
+            const progress = growth % 100;
+            return progress;
+        }
+
+        const messages = {
+            water: [
+                "Ah, refreshing! 💧",
+                "Thank you for the drink!",
+                "Just what I needed~",
+                "Splish splash! 💦",
+                "Feeling hydrated and happy!"
+            ],
+            sun: [
+                "Basking in the warmth~ ☀️",
+                "Lovely sunshine!",
+                "Photosynthesis engaged! ✨",
+                "So cozy and warm...",
+                "Thank you for the light!"
+            ],
+            talk: [
+                "It's so nice to hear your voice!",
+                "Tell me more! I'm listening~ 🌿",
+                "Your words make me grow!",
+                "I love our little chats 💚",
+                "You're the best plant parent!",
+                "I may be quiet, but I appreciate you!",
+                "Your company means everything 🌱"
+            ],
+            idle: [
+                "Just growing at my own pace~",
+                "It's a beautiful day to be a plant!",
+                "Thinking leafy thoughts... 🍃",
+                "Every day is a good day!",
+                "So grateful to be your plant 💚",
+                "Life is good in this little pot~",
+                "Stretching towards the sky! 🌤️"
+            ]
+        };
+
+        function showMessage(category) {
+            const msgs = messages[category];
+            const msg = msgs[Math.floor(Math.random() * msgs.length)];
+            document.getElementById('message').textContent = msg;
+        }
+
+        function createSparkle(x, y, emoji) {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'sparkle';
+            sparkle.textContent = emoji;
+            sparkle.style.left = x + 'px';
+            sparkle.style.top = y + 'px';
+            container.appendChild(sparkle);
+            setTimeout(() => sparkle.remove(), 800);
+        }
+
+        function addCareSparkles(emoji) {
+            const rect = container.getBoundingClientRect();
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const x = Math.random() * rect.width;
+                    const y = Math.random() * rect.height * 0.7;
+                    createSparkle(x, y, emoji);
+                }, i * 100);
+            }
+        }
+
+        function water() {
+            plant.waterCount++;
+            plant.growthPoints += 5 + Math.random() * 3;
+            plant.lastVisit = Date.now();
+            showMessage('water');
+            addCareSparkles('💧');
+            save();
+            updateDisplay();
+        }
+
+        function giveSun() {
+            plant.sunCount++;
+            plant.growthPoints += 5 + Math.random() * 3;
+            plant.lastVisit = Date.now();
+            showMessage('sun');
+            addCareSparkles('☀️');
+            save();
+            updateDisplay();
+        }
+
+        function talk() {
+            plant.talkCount++;
+            plant.growthPoints += 3 + Math.random() * 2;
+            plant.lastVisit = Date.now();
+            showMessage('talk');
+            addCareSparkles('💬');
+            save();
+            updateDisplay();
+        }
+
+        // ============================================
+        // Display & UI
+        // ============================================
+
+        function updateDisplay() {
+            // Update stats
+            const ageInDays = Math.floor((Date.now() - plant.createdAt) / (1000 * 60 * 60 * 24));
+            const ageText = ageInDays === 0 ? 'today' :
+                           ageInDays === 1 ? '1 day' :
+                           `${ageInDays} days`;
+            document.getElementById('ageDisplay').textContent = ageText;
+            document.getElementById('waterCount').textContent = plant.waterCount;
+            document.getElementById('sunCount').textContent = plant.sunCount;
+            document.getElementById('talkCount').textContent = plant.talkCount;
+            document.getElementById('plantName').value = plant.name;
+
+            // Update growth bar
+            const progress = getProgressToNextLevel();
+            document.getElementById('growthBar').style.width = progress + '%';
+
+            // Redraw plant
+            drawPlant();
+        }
+
+        function formatAge(ms) {
+            const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+            if (days === 0) return 'today';
+            if (days === 1) return '1 day';
+            return `${days} days`;
+        }
+
+        // ============================================
+        // Save/Load/Export/Import
+        // ============================================
+
+        function save() {
+            plant.name = document.getElementById('plantName').value || 'Little Sprout';
+            localStorage.setItem('eternalPlant', JSON.stringify(plant));
+        }
+
+        function load() {
+            const saved = localStorage.getItem('eternalPlant');
+            if (saved) {
+                try {
+                    plant = JSON.parse(saved);
+                } catch (e) {
+                    console.log('Could not load saved plant, starting fresh');
+                }
+            }
+        }
+
+        function exportPlant() {
+            save();
+            const data = JSON.stringify(plant, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${plant.name.replace(/[^a-z0-9]/gi, '_')}_plant.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showMessage('idle');
+            document.getElementById('message').textContent = 'Plant exported! Keep it safe~ 💚';
+        }
+
+        function importPlant(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    // Validate it's a plant
+                    if (imported.seed !== undefined && imported.createdAt !== undefined) {
+                        plant = imported;
+                        plant.lastVisit = Date.now();
+                        save();
+                        updateDisplay();
+                        document.getElementById('message').textContent = `Welcome home, ${plant.name}! 🌱`;
+                    } else {
+                        document.getElementById('message').textContent = 'That doesn\'t seem to be a plant file...';
+                    }
+                } catch (err) {
+                    document.getElementById('message').textContent = 'Couldn\'t read that file, sorry!';
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function newPlant() {
+            if (!confirm('Start growing a new plant? Your current plant will be replaced.')) return;
+
+            plant = {
+                seed: Math.random() * 1000000,
+                name: 'Little Sprout',
+                createdAt: Date.now(),
+                lastVisit: Date.now(),
+                growthPoints: 0,
+                waterCount: 0,
+                sunCount: 0,
+                talkCount: 0,
+                lSystemState: null
+            };
+            save();
+            updateDisplay();
+            document.getElementById('message').textContent = 'A new journey begins! 🌱';
+        }
+
+        // ============================================
+        // Initialization
+        // ============================================
+
+        function init() {
+            load();
+
+            // Passive growth bonus for returning
+            const hoursSinceVisit = (Date.now() - plant.lastVisit) / (1000 * 60 * 60);
+            if (hoursSinceVisit > 1) {
+                plant.growthPoints += Math.min(hoursSinceVisit * 0.5, 20);
+                plant.lastVisit = Date.now();
+                save();
+            }
+
+            updateDisplay();
+            showMessage('idle');
+
+            // Auto-save on name change
+            document.getElementById('plantName').addEventListener('change', save);
+            document.getElementById('plantName').addEventListener('blur', save);
+
+            // Redraw on resize
+            window.addEventListener('resize', drawPlant);
+
+            // Periodic idle messages
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    showMessage('idle');
+                }
+            }, 30000);
+
+            // Periodic save and growth update
+            setInterval(() => {
+                save();
+                updateDisplay();
+            }, 60000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
