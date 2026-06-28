@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Notes on X-ray Plunge Projection</title>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"
+      async
+    ></script>
+    <script src="../js/three/three_.js"></script>
+    <script src="../js/three/OrbitControls_.js"></script>
+    <script src="../js/three/GLTFExporter_.js"></script>
+    <script src="../js/lz-string.js"></script>
+    <script src="../js/desurvey.js"></script>
+    <script src="../js/localforage.js"></script>
+    <style>
+      .content {
+        max-width: 960px;
+        margin: auto;
+      }
+
+      canvas {
+        width: 100%;
+        height: 100%;
+      }
+
+      #data-entry {
+        display: grid;
+        max-height: 80vh;
+        grid-template-columns: 1.2fr 1fr;
+        grid-column-gap: 30px;
+        grid-template-areas:
+          "collar survey"
+          "options lith";
+      }
+      #collar {
+        grid-area: collar;
+      }
+
+      #survey {
+        grid-area: survey;
+      }
+
+      #lith {
+        grid-area: lith;
+      }
+
+      #options {
+        grid-area: options;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="content">
+      <h1>Notes on X-ray Plunge Projection</h1>
+      <nav>
+        <a href="../index.html">Home</a>
+        <a href="../site.html">Site</a>
+      </nav>
+      <span id="page-created">created: <em>2022-01-21</em></span>
+      <span id="page-modified">modified: <em>2022-01-21</em></span>
+
+      <a name="interactive-tool"></a>
+      <h2><a href="#interactive-tool">Interactive Example</a></h2>
+      <canvas id="three-canvas"></canvas>
+      <div id="data-entry">
+        <details id="collar" open>
+          <summary>Collar</summary>
+        </details>
+        <details id="survey" open>
+          <summary>Survey</summary>
+        </details>
+        <details id="lith" open>
+          <summary>Lith</summary>
+        </details>
+        <details id="options" open>
+          <summary>Options</summary>
+        </details>
+      </div>
+      <button id="dlmodel">download model</button>
+      <button id="armodel">AR.js</button>
+      <button id="xrmodel">WebXR</button>
+
+      <hr />
+      <!-- <sup id="fn1">
+        <p>
+          1. Always check if the angle between two consecutive survey points is
+          not zero or near zero; if so, use the tangent method for the segment
+          instead of spherical arc, as the numerical precision might blow up and
+          give you bad results.
+        </p>
+        <p>
+          On the subject of angles, you can either use the arccosine of the dot
+          product or the arctangent of the magnitude of the cross product over
+          the dot product. The second method is much more precise for small
+          angles and will allow you to use a closer tolerance before considering
+          that the angle between two survey points is zero. It's costlier in
+          terms of processing, though.
+          <a href="#ref1" title="Jump back to footnote 1 in the text."
+            >&#8617;</a
+          >
+        </p></sup
+      > -->
+      <h2>References</h2>
+      <ul>
+        <li>
+          <a
+            href="https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/"
+            >The dark art of drillhole desurveying, from the leapfrog3d blog</a
+          >
+          (<a
+            href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/"
+            >internet archive</a
+          >)
+        </li>
+        <li>
+          <a href="http://home.btconnect.com/SiliconDale/silicon13.htm"
+            >Drillhole De-Surveying, from Steve Henley's blog</a
+          >
+          (<a
+            href="https://web.archive.org/web/20190628214612/http://home.btconnect.com/SiliconDale/silicon13.htm"
+            >internet archive</a
+          >)
+        </li>
+      </ul>
+      <h2>
+        <a href="https://github.com/endarthur/endarthur.github.io/issues/2"
+          >Comments</a
+        >
+      </h2>
+    </div>
+
+    <script>
+      // https://github.com/mrdoob/three.js/blob/master/examples/misc_exporter_gltf.html
+      function exportGLTF(input) {
+        const gltfExporter = new THREE.GLTFExporter();
+
+        gltfExporter.parse(
+          input,
+          function (result) {
+            saveArrayBuffer(result, "desurvey.glb");
+          },
+          { binary: true }
+        );
+      }
+
+      const link = document.createElement("a");
+      link.style.display = "none";
+      document.body.appendChild(link); // Firefox workaround, see #6594
+
+      function save(blob, filename) {
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+
+        // URL.revokeObjectURL( url ); breaks Firefox...
+      }
+
+      function storeGLTF(input, target) {
+        const gltfExporter = new THREE.GLTFExporter();
+
+        gltfExporter.parse(
+          input,
+          function (result) {
+            localforage.setItem("desurvey", new Blob([result], { type: "application/octet-stream" })).then(
+                e => {
+                    console.log("data stored");
+                    window.open(`../tools/${target}#desurvey`);
+                }
+            );
+          },
+          { binary: true }
+        );
+      }
+
+      function saveArrayBuffer(buffer, filename) {
+        save(
+          new Blob([buffer], { type: "application/octet-stream" }),
+          filename
+        );
+      }
+
+      document.getElementById("dlmodel").addEventListener("click", (e) => {
+        exportGLTF(dh_group);
+      });
+      document.getElementById("armodel").addEventListener("click", (e) => {
+        storeGLTF(dh_group, "ar_load.html");
+      });
+      document.getElementById("xrmodel").addEventListener("click", (e) => {
+        storeGLTF(dh_group, "xr_load.html");
+      });
+
+      let dh_group = new THREE.Group();
+
+      const state = {
+        dh: {},
+        liths: {},
+      };
+
+      function isEmpty(obj) {
+        for (var i in obj) return false;
+        return true;
+      }
+
+      const trace_material = new THREE.MeshPhongMaterial({
+        color: "#708090",
+        // specular: 0xffffff,
+        shininess: 10,
+        side: THREE.DoubleSide,
+      });
+
+      const default_lith = new THREE.MeshPhongMaterial({
+        color: "#ff0000",
+        // specular: 0xffffff,
+        shininess: 10,
+        side: THREE.DoubleSide,
+      });
+
+      const bbox = new THREE.Box3();
+      function updateDrillHoles() {
+        const dh = {};
+
+        const opts = document.opts.getData();
+
+        const trace_color = opts[1][1];
+        trace_material.color = new THREE.Color(trace_color);
+
+        const [ox, oz, oy] = opts[0]
+          .slice(1)
+          .map((v) => parseFloat(v.replace(",", ".")));
+        const offset = new THREE.Vector3(ox, oy, oz);
+
+        document.collar
+          .getData()
+          .slice(1)
+          .filter((r) => r.every((c) => c !== ""))
+          .forEach(([bhid, x, y, z, length]) => {
+            [x, y, z, length] = [x, z, y, length].map((v) =>
+              parseFloat(v.replace(",", "."))
+            );
+            const collar = new THREE.Vector3(x, y, z).sub(offset);
+            dh[bhid] = {
+              collar: collar,
+              length: length,
+              //   color: color,
+              survey: [],
+              intervals: [],
+              desurvey: null,
+              trace_mesh: null,
+              interval_meshes: {},
+              survey_str: null,
+              interval_str: null,
+            };
+          });
+
+        document.survey
+          .getData()
+          .slice(1)
+          .filter((r) => r.every((c) => c !== "") && r[0] in dh)
+          .forEach(([bhid, ...survey]) => {
+            survey = survey.map((v) => parseFloat(v.replace(",", ".")));
+            dh[bhid].survey.push(survey);
+          });
+
+        const liths = {};
+        document.lith
+          .getData()
+          .slice(1)
+          .filter((r) => r.every((c) => c !== "") && r[0] in dh)
+          .forEach(([bhid, from, to, lith]) => {
+            [from, to] = [from, to].map((v) => parseFloat(v.replace(",", ".")));
+            dh[bhid].intervals.push([from, to, lith]);
+            if (!(lith in liths)) {
+              liths[lith] = null;
+            }
+          });
+
+        opts.slice(3).forEach(([lith, color, ..._]) => {
+          if (lith in state.liths && state.liths[lith] !== null) {
+            liths[lith] = state.liths[lith];
+            liths[lith].color = new THREE.Color(color);
+          } else {
+            liths[lith] = new THREE.MeshPhongMaterial({
+              color: new THREE.Color(color),
+              // specular: 0xffffff,
+              shininess: 10,
+              side: THREE.DoubleSide,
+            });
+          }
+        });
+
+        for (const lith in state.liths) {
+          if (!(lith in liths)) {
+            state.liths[lith].dispose();
+          }
+        }
+
+        state.liths = liths;
+
+        for (const d in dh) {
+          const dh_current = dh[d];
+          dh_current.survey_str = JSON.stringify(dh_current.survey);
+          dh_current.intervals_str = JSON.stringify(dh_current.intervals);
+        }
+
+        for (const d in state.dh) {
+          const dh_prev = state.dh[d];
+          if (d in dh) {
+            const dh_current = dh[d];
+            const desurveyNeedsUpdate = !(
+              dh_prev.collar.equals(dh_current.collar) &&
+              dh_prev.survey_str == dh_current.survey_str
+            );
+            if (desurveyNeedsUpdate) {
+              if (dh_prev.trace_mesh != null) {
+                dh_prev.trace_mesh.geometry.dispose();
+                dh_group.remove(dh_prev.trace_mesh);
+              }
+            } else {
+              dh_current.trace_mesh = dh_prev.trace_mesh;
+              dh_current.desurvey = dh_prev.desurvey;
+            }
+            const intervalsNeedsUpdate =
+              desurveyNeedsUpdate ||
+              dh_prev.intervals_str != dh_current.intervals_str;
+            if (intervalsNeedsUpdate) {
+              Object.entries(dh_prev.interval_meshes).forEach(([l, m]) => {
+                m.geometry.dispose();
+                dh_group.remove(m);
+              });
+            } else {
+              dh_current.interval_meshes = dh_prev.interval_meshes;
+            }
+          } else {
+            dh_prev.trace_mesh.geometry.dispose();
+            dh_group.remove(dh_prev.trace_mesh);
+            Object.entries(dh_prev.interval_meshes).forEach(([l, m]) => {
+              m.geometry.dispose();
+              dh_group.remove(m);
+            });
+          }
+        }
+
+        state.dh = dh;
+
+        for (const bhid in dh) {
+          const { collar, length, survey, intervals } = dh[bhid];
+          if (survey.length < 1) continue;
+          survey.sort((s) => s[0]);
+
+          // desurvey, trace_mesh, interval_meshes
+
+          let path;
+          if (dh[bhid].desurvey === null) {
+            path = new Drillhole(survey, collar, length);
+            const geometry = new THREE.TubeBufferGeometry(
+              path,
+              Math.max(Math.ceil(path.total_length / 2), 2),
+              1,
+              8
+            );
+            const mesh = new THREE.Mesh(geometry, trace_material);
+            dh_group.add(mesh);
+            dh[bhid].desurvey = path;
+            dh[bhid].trace_mesh = mesh;
+          } else {
+            path = dh[bhid].desurvey;
+          }
+
+          if (!isEmpty(dh[bhid].interval_meshes)) {
+            for (const lith in dh[bhid].interval_meshes) {
+              dh[bhid].interval_meshes[lith].material =
+                liths[lith] ?? default_lith;
+            }
+            continue;
+          }
+          for (const [from, to, lith] of intervals) {
+            const lpath = path.getSegment(from, to);
+            const lgeometry = new THREE.TubeGeometry(
+              lpath,
+              Math.max(Math.ceil(lpath.dl / 2), 2),
+              2,
+              8
+            );
+            if (lith in dh[bhid].interval_meshes) {
+              dh[bhid].interval_meshes[lith].merge(lgeometry);
+            } else {
+              dh[bhid].interval_meshes[lith] = lgeometry;
+            }
+          }
+
+          for (const lith in dh[bhid].interval_meshes) {
+            const geometry = new THREE.BufferGeometry().fromGeometry(
+              dh[bhid].interval_meshes[lith]
+            );
+            const mesh = new THREE.Mesh(geometry, liths[lith] ?? default_lith);
+            dh_group.add(mesh);
+            dh[bhid].interval_meshes[lith] = mesh;
+          }
+        }
+      }
+
+      //https://stackoverflow.com/a/45046955/1457481
+      const renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById("three-canvas"),
+        antialias: true,
+      });
+
+      const dcos_line = (tr, pg, v) =>
+        v.setFromSphericalCoords(1.0, radians(90.0 + pg), radians(180.0 - tr));
+
+      const radians = (d) => (d * Math.PI) / 180.0;
+      const degrees = (r) => (r * 180.0) / Math.PI;
+
+      // There's no reason to set the aspect here because we're going
+      // to set it every frame anyway so we'll set it to 2 since 2
+      // is the the aspect for the canvas default size (300w/150h = 2)
+      const camera = new THREE.PerspectiveCamera(70, 2, 1, 1e9);
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      camera.position.set(0, 0, 200);
+      controls.update();
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xececec);
+      scene.add(new THREE.GridHelper(1000, 10, 0x888888, 0x444444));
+      scene.add(dh_group);
+
+      const light1 = new THREE.PointLight(0xffffff, 2, 0);
+      light1.position.set(200, 100, 300);
+      scene.add(light1);
+
+      const ambient_light = new THREE.AmbientLight(0xa0a0a0); // soft white light
+      scene.add(ambient_light);
+
+      function resizeCanvasToDisplaySize() {
+        const canvas = renderer.domElement;
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        if (canvas.width !== width || canvas.height !== height) {
+          // you must pass false here or three.js sadly fights the browser
+          renderer.setSize(width, height, false);
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+
+          // set render target sizes here
+        }
+      }
+
+      function animate(time) {
+        // time *= 0.001; // seconds
+
+        resizeCanvasToDisplaySize();
+
+        controls.update();
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+
+      requestAnimationFrame(animate);
+    </script>
+    <script type="module">
+      import Importabular from "../js/importabular.js";
+
+      class DHEditor extends Importabular {
+        _classNames(x, y) {
+          return super._classNames(x, y) + " " + this.validationClasses(x, y);
+        }
+        validationClasses(x, y) {
+          if (!y) return "header";
+
+          const value = this._getVal(x, y);
+          if (!value) return "";
+          // switch (x) {
+          //   case 0:
+          //     // Name column
+          //     return value.length > 3 ? "ok" : "error";
+          //   case 1:
+          //     // Phone column
+          //     if (!value) return "";
+          //     return checkPhone(value) ? "ok" : "error";
+          //   case 2:
+          //     // Email column
+          //     if (!value) return "";
+          //     return checkEmail(value) ? "ok" : "error";
+          // }
+          return "";
+        }
+        _startEditing({ x, y }) {
+          this._editing = { x, y };
+          const td = this._getCell(x, y);
+
+          // Measure the current content
+          const tdSize = td.getBoundingClientRect();
+          const cellSize = td.firstChild.getBoundingClientRect();
+
+          // remove the current content
+          td.removeChild(td.firstChild);
+
+          // add the input
+          let input;
+          const current_selected = this._getVal(x, y);
+          const header = this._getVal(x, 0).toLowerCase();
+          switch (header) {
+            case "x":
+            case "y":
+            case "z":
+            case "length":
+            case "at":
+            case "from":
+            case "to":
+            case "bearing":
+            case "dip":
+            case "assay":
+              input = document.createElement("input");
+              input.type = "number";
+              input.value = current_selected.replace(",", ".");
+              break;
+            case "color":
+              input = document.createElement("input");
+              input.type = "color";
+              input.value = current_selected;
+              break;
+            default:
+              input = document.createElement("input");
+              input.type = "text";
+              input.value = current_selected;
+              break;
+          }
+
+          td.appendChild(input);
+
+          // Make the new content fit the past size
+          Object.assign(td.style, {
+            width: tdSize.width - 2,
+            height: tdSize.height,
+          });
+
+          Object.assign(input.style, {
+            width: `${cellSize.width}px`,
+            height: `${cellSize.height}px`,
+          });
+
+          input.focus();
+          input.addEventListener("blur", this._stopEditing);
+          input.addEventListener("keydown", this._blurIfEnter);
+        }
+        _setVal(x, y, val) {
+          // Prevent header editing after the initial loading
+          if (!y && this._getVal(x, y)) return;
+          return super._setVal(x, y, val);
+        }
+      }
+
+      class OptionsEditor extends Importabular {
+        _classNames(x, y) {
+          return super._classNames(x, y) + " " + this.validationClasses(x, y);
+        }
+        validationClasses(x, y) {
+          if (y === 2 || (y < 2 && !x)) return "header";
+
+          const value = this._getVal(x, y);
+          if (!value) return "";
+          // switch (x) {
+          //   case 0:
+          //     // Name column
+          //     return value.length > 3 ? "ok" : "error";
+          //   case 1:
+          //     // Phone column
+          //     if (!value) return "";
+          //     return checkPhone(value) ? "ok" : "error";
+          //   case 2:
+          //     // Email column
+          //     if (!value) return "";
+          //     return checkEmail(value) ? "ok" : "error";
+          // }
+          return "";
+        }
+        _startEditing({ x, y }) {
+          //   if (y === 2 || (y < 2 && !x)) return;
+          this._editing = { x, y };
+          const td = this._getCell(x, y);
+
+          // Measure the current content
+          const tdSize = td.getBoundingClientRect();
+          const cellSize = td.firstChild.getBoundingClientRect();
+
+          // remove the current content
+          td.removeChild(td.firstChild);
+
+          // add the input
+          let input;
+          const current_selected = this._getVal(x, y);
+          const header =
+            y < 3
+              ? this._getVal(0, y).toLowerCase()
+              : this._getVal(x, 2).toLowerCase();
+          switch (header) {
+            case "x":
+            case "y":
+            case "z":
+            case "length":
+            case "at":
+            case "from":
+            case "to":
+            case "bearing":
+            case "dip":
+            case "offset":
+              input = document.createElement("input");
+              input.type = "number";
+              input.value = current_selected.replace(",", ".");
+              break;
+            case "color":
+            case "trace color":
+              input = document.createElement("input");
+              input.type = "color";
+              input.value = current_selected;
+              break;
+            default:
+              input = document.createElement("input");
+              input.type = "text";
+              input.value = current_selected;
+              break;
+          }
+
+          td.appendChild(input);
+
+          // Make the new content fit the past size
+          Object.assign(td.style, {
+            width: tdSize.width - 2,
+            height: tdSize.height,
+          });
+
+          Object.assign(input.style, {
+            width: `${cellSize.width}px`,
+            height: `${cellSize.height}px`,
+          });
+
+          input.focus();
+          input.addEventListener("blur", this._stopEditing);
+          input.addEventListener("keydown", this._blurIfEnter);
+        }
+        _setVal(x, y, val) {
+          // Prevent header editing after the initial loading
+          //   if ((y === 2 || (y < 2 && !x)) && this._getVal(x, y)) return;
+          return super._setVal(x, y, val);
+        }
+      }
+
+      const css = `
+              table{
+              font-size:medium;
+              margin:auto;
+              width:100%;
+              }
+              td>*{
+                  min-width: 4em;
+              }
+              td.header{
+                  font-weight:bold;
+              }
+            `;
+
+      function loadData() {
+        const params = new URLSearchParams(location.search);
+        let collar, survey, lith, options;
+        if (!params.has("data")) {
+          collar = JSON.parse(params.get("collar"));
+          survey = JSON.parse(params.get("survey"));
+        } else {
+          const data = JSON.parse(
+            LZString.decompressFromEncodedURIComponent(params.get("data"))
+          );
+          collar = data["collar"];
+          survey = data["survey"];
+          lith = data["lith"];
+          options = data["options"];
+        }
+        collar = collar ?? [
+          ["bhid", "x", "y", "z", "length"],
+          ["DH01", "0", "-40", "0", "120"],
+          ["DH02", "20", "-20", "0", "100"],
+          ["DH03", "10", "30", "0", "90"],
+          ["DH04", "0", "50", "0", "140"],
+        ];
+        survey = survey ?? [
+          ["bhid", "at", "bearing", "dip"],
+          ["DH01", "0", "120", "60"],
+          ["DH01", "70", "130", "45"],
+          ["DH01", "100", "160", "30"],
+          ["DH02", "0", "120", "60"],
+          ["DH02", "30", "120", "45"],
+          ["DH02", "100", "130", "30"],
+          ["DH03", "0", "120", "60"],
+          ["DH03", "100", "160", "30"],
+          ["DH04", "0", "120", "75"],
+          ["DH04", "30", "130", "65"],
+          ["DH04", "70", "130", "45"],
+          ["DH04", "100", "160", "30"],
+        ];
+        lith = lith ?? [
+          ["bhid", "from", "to", "assay"],
+          ["DH01", "0", "20", "A"],
+          ["DH01", "60", "90", "B"],
+          ["DH02", "0", "10", "A"],
+          ["DH02", "50", "80", "B"],
+          ["DH03", "10", "20", "A"],
+          ["DH03", "40", "60", "B"],
+          ["DH04", "30", "50", "B"],
+        ];
+        options = options ?? [
+          ["offset", "0.0", "0.0", "0.0"],
+          ["trace color", "#708090", "", ""],
+          ["assay", "color", "", ""],
+          ["A", "#00ff00", "", ""],
+          ["B", "#0000ff", "", ""],
+        ];
+        document.collar.setData(collar);
+        document.survey.setData(survey);
+        document.lith.setData(lith);
+        document.opts.setData(options);
+      }
+
+      document.collar = new DHEditor({
+        data: [["bhid", "x", "y", "z", "length"]],
+        node: document.getElementById("collar"),
+        minCols: 5,
+        maxCols: 5,
+        css: css,
+        height: "30vh",
+        onChange: updateURL,
+      });
+      document.survey = new DHEditor({
+        data: [["bhid", "at", "bearing", "dip"]],
+        node: document.getElementById("survey"),
+        minCols: 4,
+        maxCols: 4,
+        css: css,
+        height: "30vh",
+        onChange: updateURL,
+      });
+      document.lith = new DHEditor({
+        data: [["bhid", "from", "to", "lith"]],
+        node: document.getElementById("lith"),
+        minCols: 4,
+        maxCols: 4,
+        css: css,
+        height: "30vh",
+        onChange: updateURL,
+      });
+      document.opts = new OptionsEditor({
+        data: [
+          ["offset", "0.0", "0.0", "0.0"],
+          ["trace color", "#708090", "", ""],
+          ["lith", "color", "", ""],
+        ],
+        node: document.getElementById("options"),
+        minCols: 4,
+        maxCols: 4,
+        css: css,
+        height: "30vh",
+        onChange: updateURL,
+      });
+
+      function updateURL() {
+        updateDrillHoles();
+        // let url = new URL(location.href);
+        // url.search = `?${new URLSearchParams({
+        //   data: compressData({
+        //     collar: document.collar.getData(),
+        //     survey: document.survey.getData(),
+        //     lith: document.lith.getData(),
+        //     options: document.opts.getData(),
+        //   }),
+        // }).toString()}`;
+        // history.pushState(null, "", url.href);
+      }
+
+      function compressData(data) {
+        return LZString.compressToEncodedURIComponent(JSON.stringify(data));
+      }
+
+      loadData();
+      updateDrillHoles();
+    </script>
+  </body>
+</html>

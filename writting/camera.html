@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Practical Desurvey</title>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML"
+      async
+    ></script>
+    <script src="https://aframe.io/releases/0.9.2/aframe.min.js"></script>
+    <style>
+      .content {
+        max-width: 960px;
+        margin: auto;
+      }
+      #capture-start {
+        max-width: 960px;
+      }
+      a-scene {
+        height: 300px;
+        width: 600px;
+      }
+      #right {
+        width: 960px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="content">
+      <h1>Notes on Photogrammetry</h1>
+      <nav>
+        <a href="../index.html">Home</a>
+        <a href="../site.html">Site</a>
+      </nav>
+      <span id="page-created">created: <em>2019-11-01</em></span>
+      <span id="page-modified">modified: <em>2019-11-01</em></span>
+      <h2>Introduction</h2>
+      <p>
+        According to the ASPRS<a href="#r1" id="ref1">[1]</a>, photogrammetry is
+        the science or art of obtaining reliable measurements by means of
+        photography.
+      </p>
+      <p>
+        As most of us carry high resolution cameras on our cellphones (which are
+        usually packed with other sensors, like compasses), we have a really
+        useful experiment platform on which to try different methods.
+      </p>
+      <h2>Camera Calibration</h2>
+      <p>
+        A very important first step is to obtain calibration parameters from our
+        camera. We could either find information from the phone manufacturer,
+        or, in our case, calculate it from a reference.
+      </p>
+      <p>
+        The vertical field of view is the vertical angle from the camera that is
+        observed in the resulting image. We can measure it by using a reference
+        target that we know the size and distance from the camera to. To
+        simplify matters, we'll consider the target to be centered and going
+        from top to bottom of the image. With \(d\) being the distance to the
+        target and \(h\) it's height: $$ FoV_v = 2 tan^{-1}(\frac{h}{2d}). $$
+      </p>
+      <p>
+        As suggested by <a href="#r2" id="ref2">[2]</a> we can use doors as
+        readily available targets. In Brazil, they are typically 210 cm high.
+        Walk away from the door until it covers the image vertically, measure
+        your distance from it and use the following calculator to obtain the
+        field of view:
+      </p>
+      <form>
+        <p>
+          <input id="target-height" type="number" min="0" value="210.0" />
+          <label for="target-height">Height</label>
+        </p>
+        <p>
+          <input id="target-distance" type="number" />
+          <label for="target-distance">Distance</label>
+        </p>
+        <p>
+          <input id="camera-fov" type="number" id="field-of-view" />
+          <label for="path-duration">Vertical Field of View</label>
+        </p>
+      </form>
+      <p>
+        This value will be cached on your browser and used automatically.
+      </p>
+      <h2>Camera</h2>
+      <video autoplay id="camera-view"></video>
+      <p>
+        <button id="capture-start">Capture</button>
+        <button id="capture-stop">Stop</button>
+      </p>
+
+      <h2>VR</h2>
+      <canvas id="right"></canvas>
+      <div id="myEmbeddedScene">
+        <a-scene embedded>
+          <a-entity
+            id="vr-camera"
+            camera
+            look-controls
+            position="0 0 0"
+          ></a-entity>
+        </a-scene>
+      </div>
+
+      <hr />
+      <!-- <sup id="fn1">
+        <p>
+          1. Always check if the angle between two consecutive survey points is
+          not zero or near zero; if so, use the tangent method for the segment
+          instead of spherical arc, as the numerical precision might blow up and
+          give you bad results.
+        </p>
+        <p>
+          On the subject of angles, you can either use the arccosine of the dot
+          product or the arctangent of the magnitude of the cross product over
+          the dot product. The second method is much more precise for small
+          angles and will allow you to use a closer tolerance before considering
+          that the angle between two survey points is zero. It's costlier in
+          terms of processing, though.
+          <a href="#refn1" title="Jump back to footnote 1 in the text."
+            >&#8617;</a
+          >
+        </p></sup
+      > -->
+      <h2>References</h2>
+      <ul>
+        <li>
+          <p id="r1">
+            <a
+              href="https://www.asprs.org/wp-content/uploads/pers/1942journal/dec/1942_dec_247-283.pdf"
+              >1942_dec_247-283.pdf</a
+            >
+            &mdash; Definitions Of Terms Used In Photogrammetric Surveying And
+            Mapping<a href="#ref1" title="Jump back to reference 1 in the text."
+              >&#8617;</a
+            >
+          </p>
+
+          <!-- (<a
+            href="https://web.archive.org/web/20190628005247/https://blog.leapfrog3d.com/2013/06/20/the-dark-art-of-drillhole-desurveying/"
+            >internet archive</a
+          >) -->
+        </li>
+        <li>
+          <p id="r2">
+            <a
+              href="https://web.archive.org/web/20131123073926/http://forestjohnson.blogspot.com/2010/01/how-to-measure-size-of-object-using.html"
+              >how-to-measure-size-of-object-using.html</a
+            >
+            &mdash; How to measure the size of an object using a camera -
+            internet archive<a
+              href="#ref2"
+              title="Jump back to reference 1 in the text."
+              >&#8617;</a
+            >
+          </p>
+        </li>
+      </ul>
+      <h2>
+        <a href="https://github.com/endarthur/endarthur.github.io/issues/2"
+          >Comments</a
+        >
+      </h2>
+    </div>
+    <script>
+      var target_height = document.getElementById("target-height");
+      var target_distance = document.getElementById("target-distance");
+      var camera_fov = document.getElementById("camera-fov");
+      let FoV = window.localStorage.getItem("FoV");
+      if (FoV != null) {
+        camera_fov.value = FoV.toString();
+        FoV = parseFloat(FoV);
+      }
+      let th = window.localStorage.getItem("target_height");
+      if (th != null) {
+        target_height.value = th.toString();
+        th = parseFloat(th);
+      }
+      let td = window.localStorage.getItem("target_distance");
+      if (td != null) {
+        target_distance.value = td.toString();
+        td = parseFloat(td);
+      }
+
+      function updateFoV() {
+        if (target_height.value === "" || target_distance.value === "") {
+          return;
+        }
+        const h = parseFloat(target_height.value);
+        const d = parseFloat(target_distance.value);
+
+        FoV = (2 * Math.atan(h / (2 * d)) * 180) / Math.PI;
+        window.localStorage.setItem("FoV", FoV);
+        window.localStorage.setItem("target_height", h);
+        window.localStorage.setItem("target_distance", d);
+        camera_fov.value = FoV.toString();
+      }
+
+      camera_fov.addEventListener("change", e => {
+        const value = parseFloat(e.target.value);
+        if (!isNaN(value)) {
+          window.localStorage.setItem("FoV", value);
+          FoV = value;
+        }
+      });
+
+      target_height.addEventListener("change", updateFoV);
+      target_distance.addEventListener("change", updateFoV);
+
+      var capture_start = document.getElementById("capture-start");
+      var capture_stop = document.getElementById("capture-stop");
+      var camera_view = document.getElementById("camera-view");
+      var camera_height, camera_width;
+      var hFoV = -1;
+
+      var is_capturing = false;
+      var azimuth_resolution = 720;
+
+      const right = document.querySelector("#right");
+      var right_ctx;
+
+      const camera_constraints = { video: { facingMode: "environment" } };
+
+      capture_start.addEventListener("mouseup", function(e) {
+        navigator.mediaDevices
+          .getUserMedia(camera_constraints)
+          .then(handleSuccess);
+      });
+      capture_stop.addEventListener("mouseup", e => {
+        camera_view.srcObject.getVideoTracks().forEach(track => track.stop());
+        is_capturing = false;
+        buildCylinder(1.0);
+      });
+
+      function handleSuccess(stream) {
+        camera_view.srcObject = stream;
+        let video_settings = stream.getVideoTracks()[0].getSettings();
+        camera_height = video_settings.height;
+        camera_width = video_settings.width;
+
+        if (target_height.value === "" || target_distance.value === "") {
+          return;
+        }
+        const h = parseFloat(target_height.value);
+        const d = parseFloat(target_distance.value);
+
+        hFoV =
+          (2 * Math.atan((h * camera_width) / (2 * d * camera_height)) * 180) /
+          Math.PI;
+
+        right.height = camera_height;
+        right.width = azimuth_resolution;
+        right_ctx = right.getContext("2d");
+        is_capturing = true;
+      }
+
+      window.addEventListener("deviceorientation", handleOrientation);
+
+      function handleOrientation(e) {
+        if (!is_capturing) {
+          return;
+        }
+        let az = e.alpha;
+        const i = Math.floor(
+          (((az + 360.0) % 360.0) * azimuth_resolution) / 360.0
+        );
+        right_ctx.drawImage(
+          camera_view,
+          Math.floor(camera_width / 2),
+          0,
+          1,
+          camera_height,
+          i,
+          0,
+          1,
+          camera_height
+        );
+      }
+
+      var vr_camera = document.getElementById("vr-camera");
+
+      AFRAME.registerComponent('draw-canvas', {
+        schema: {default: ''},
+
+        init: function () {
+          this.canvas = document.getElementById(this.data);
+          this.ctx = this.canvas.getContext('2d');
+
+          // Draw on canvas...
+        }
+      });
+
+      function buildCylinder(d) {
+        var el = document.createElement("a-cylinder");
+        el.setAttribute("height", d * Math.tan((FoV * Math.PI) / 360.0));
+        el.setAttribute("radius", d);
+        el.setAttribute("material", {
+          src: "#right",
+          side: "double"
+        });
+        // el.setAttribute('draw-canvas', "right");
+        el.setAttribute("open-ended", true);
+        el.setAttribute('rotation', {x: 0, y: 90, z: 0});
+
+        var sceneEl = document.querySelector("a-scene");
+        sceneEl.appendChild(el);
+
+        // vr_camera.setAttribute("fov", FoV);
+      }
+    </script>
+  </body>
+</html>
